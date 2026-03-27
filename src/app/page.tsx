@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, type FormEvent } from 'react';
+import Image from 'next/image';
 import { ArrowUp, Building2, CheckSquare, Square } from 'lucide-react';
 import {
   scenarios,
@@ -443,9 +444,7 @@ export default function ChatPage() {
           <div className="flex h-full flex-col items-center justify-center px-4">
             <div className="flex flex-col items-center gap-4 pb-8">
               {/* Logo */}
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1B4D8E] text-2xl font-bold text-white shadow-lg">
-                강
-              </div>
+              <Image src="/gangnam-realty-demo/gangnam-logo.png" alt="강남구" width={72} height={72} className="object-contain" />
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-[#1A1A2E]">
                   강남부동산톡

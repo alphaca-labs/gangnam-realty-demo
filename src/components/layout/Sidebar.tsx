@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   MessageSquare, Calculator, ClipboardList, FileText,
@@ -39,9 +40,7 @@ export default function Sidebar() {
     <>
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold">
-          강
-        </div>
+        <Image src="/gangnam-realty-demo/gangnam-logo.png" alt="강남구" width={32} height={32} className="object-contain" />
         <span className="text-base font-semibold text-foreground">강남부동산톡</span>
       </div>
 
