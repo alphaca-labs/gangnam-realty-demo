@@ -1,9 +1,9 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  output: 'export',
+  output: "export",
+  basePath: "/gangnam-realty-demo",
   trailingSlash: true,
-  basePath: '/gangnam-realty-demo',
   images: {
     unoptimized: true,
   },

@@ -1,166 +1,406 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { BarChart3 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { mockTransactions, priceChartData, dongs } from '@/data/mock-transactions';
-import { formatCurrency, formatNumber } from '@/lib/utils';
+import { useState, useEffect, useMemo } from 'react';
+import { BarChart3, TrendingUp, TrendingDown, Hash, Search, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
+import {
+  transactions,
+  dongList,
+  getComplexesByDong,
+} from '@/data/mock-transactions';
+
+type SortKey = 'dong' | 'complex' | 'area' | 'floor' | 'price' | 'date' | 'type';
+type SortDir = 'asc' | 'desc';
 
 export default function PricesPage() {
+  const [mounted, setMounted] = useState(false);
   const [selectedDong, setSelectedDong] = useState('전체');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedComplex, setSelectedComplex] = useState('전체');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  const filteredTransactions = useMemo(() => {
-    let result = mockTransactions;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-    if (selectedDong !== '전체') {
-      result = result.filter((t) => t.dong === selectedDong);
+  // Reset complex when dong changes
+  useEffect(() => {
+    setSelectedComplex('전체');
+  }, [selectedDong]);
+
+  // Available complexes for selected dong
+  const complexOptions = useMemo(() => {
+    if (selectedDong === '전체') {
+      return [...new Set(transactions.map((t) => t.complex))].sort();
     }
+    return getComplexesByDong(selectedDong);
+  }, [selectedDong]);
 
-    if (searchTerm) {
-      result = result.filter(
-        (t) =>
-          t.complex.includes(searchTerm) ||
-          t.dong.includes(searchTerm)
-      );
-    }
+  // Filtered transactions
+  const filtered = useMemo(() => {
+    return transactions.filter((t) => {
+      if (selectedDong !== '전체' && t.dong !== selectedDong) return false;
+      if (selectedComplex !== '전체' && t.complex !== selectedComplex) return false;
+      if (searchQuery && !t.complex.includes(searchQuery)) return false;
+      return true;
+    });
+  }, [selectedDong, selectedComplex, searchQuery]);
 
-    return result;
-  }, [selectedDong, searchTerm]);
-
+  // Statistics
   const stats = useMemo(() => {
-    if (filteredTransactions.length === 0) {
-      return { avg: 0, max: 0, min: 0, count: 0 };
+    if (filtered.length === 0) {
+      return { count: 0, avg: 0, max: 0, min: 0 };
     }
-
-    const prices = filteredTransactions.map((t) => t.price);
+    const prices = filtered.map((t) => t.price);
     return {
-      avg: Math.floor(prices.reduce((a, b) => a + b, 0) / prices.length),
+      count: filtered.length,
+      avg: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
       max: Math.max(...prices),
       min: Math.min(...prices),
-      count: prices.length,
     };
-  }, [filteredTransactions]);
+  }, [filtered]);
+
+  // Monthly average chart data
+  const chartData = useMemo(() => {
+    const monthMap = new Map<string, { sum: number; count: number }>();
+    filtered.forEach((t) => {
+      const existing = monthMap.get(t.date) || { sum: 0, count: 0 };
+      monthMap.set(t.date, {
+        sum: existing.sum + t.price,
+        count: existing.count + 1,
+      });
+    });
+    return Array.from(monthMap.entries())
+      .map(([date, { sum, count }]) => ({
+        date,
+        avgPrice: Math.round(sum / count),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [filtered]);
+
+  // Sorted table data
+  const sortedData = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'dong':
+          cmp = a.dong.localeCompare(b.dong);
+          break;
+        case 'complex':
+          cmp = a.complex.localeCompare(b.complex);
+          break;
+        case 'area':
+          cmp = a.area - b.area;
+          break;
+        case 'floor':
+          cmp = a.floor - b.floor;
+          break;
+        case 'price':
+          cmp = a.price - b.price;
+          break;
+        case 'date':
+          cmp = a.date.localeCompare(b.date);
+          break;
+        case 'type':
+          cmp = a.type.localeCompare(b.type);
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  }
+
+  function formatPrice(price: number) {
+    if (price >= 10000) {
+      const uk = Math.floor(price / 10000);
+      const remainder = price % 10000;
+      return remainder > 0 ? `${uk}억 ${remainder.toLocaleString()}` : `${uk}억`;
+    }
+    return `${price.toLocaleString()}만원`;
+  }
+
+  const statCards = [
+    {
+      label: '거래 건수',
+      value: `${stats.count}건`,
+      icon: Hash,
+      color: 'text-[#1B4D8E]',
+      bg: 'bg-[#E3F2FD]',
+    },
+    {
+      label: '평균가',
+      value: stats.avg ? formatPrice(stats.avg) : '-',
+      icon: BarChart3,
+      color: 'text-[#10A37F]',
+      bg: 'bg-[#D1FAE5]',
+    },
+    {
+      label: '최고가',
+      value: stats.max ? formatPrice(stats.max) : '-',
+      icon: TrendingUp,
+      color: 'text-[#EF4444]',
+      bg: 'bg-red-50',
+    },
+    {
+      label: '최저가',
+      value: stats.min ? formatPrice(stats.min) : '-',
+      icon: TrendingDown,
+      color: 'text-[#6B7280]',
+      bg: 'bg-gray-100',
+    },
+  ];
+
+  const columns: { key: SortKey; label: string }[] = [
+    { key: 'dong', label: '동' },
+    { key: 'complex', label: '단지명' },
+    { key: 'area', label: '면적(㎡)' },
+    { key: 'floor', label: '층' },
+    { key: 'price', label: '거래가(만원)' },
+    { key: 'date', label: '거래일' },
+    { key: 'type', label: '유형' },
+  ];
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 pb-20 md:pb-8">
-      <div className="max-w-7xl mx-auto">
-        {/* 헤더 */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-            <BarChart3 className="w-6 h-6 text-primary" />
+    <div className="flex-1 overflow-y-auto pt-14 lg:pt-0">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-[#1A1A2E] sm:text-3xl">
+            실거래가 시각화 대시보드
+          </h1>
+          <p className="mt-1 text-sm text-[#6B7280]">
+            강남구 주요 단지 실거래가 분석
+          </p>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[#6B7280]">동 선택</label>
+            <select
+              value={selectedDong}
+              onChange={(e) => setSelectedDong(e.target.value)}
+              className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#1A1A2E] outline-none transition-colors focus:border-[#1B4D8E] focus:ring-1 focus:ring-[#1B4D8E]"
+            >
+              <option value="전체">전체</option>
+              {dongList.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-primary">실거래가 조회</h1>
-            <p className="text-sm text-text-secondary">강남구 아파트 실거래 데이터</p>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[#6B7280]">단지 선택</label>
+            <select
+              value={selectedComplex}
+              onChange={(e) => setSelectedComplex(e.target.value)}
+              className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#1A1A2E] outline-none transition-colors focus:border-[#1B4D8E] focus:ring-1 focus:ring-[#1B4D8E]"
+            >
+              <option value="전체">전체</option>
+              {complexOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* 통계 카드 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-xl border border-border">
-            <div className="text-xs text-text-secondary mb-1">평균가</div>
-            <div className="text-lg font-bold text-primary">{formatNumber(stats.avg)}만</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-border">
-            <div className="text-xs text-text-secondary mb-1">최고가</div>
-            <div className="text-lg font-bold text-accent">{formatNumber(stats.max)}만</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-border">
-            <div className="text-xs text-text-secondary mb-1">최저가</div>
-            <div className="text-lg font-bold">{formatNumber(stats.min)}만</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-border">
-            <div className="text-xs text-text-secondary mb-1">거래 건수</div>
-            <div className="text-lg font-bold">{stats.count}건</div>
-          </div>
+        {/* Statistics Cards */}
+        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {statCards.map((card) => (
+            <div
+              key={card.label}
+              className="flex items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4 transition-shadow hover:shadow-sm"
+            >
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${card.bg}`}
+              >
+                <card.icon className={`h-5 w-5 ${card.color}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-[#6B7280]">{card.label}</p>
+                <p className="truncate text-lg font-bold text-[#1A1A2E]">
+                  {card.value}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* 차트 */}
-        <div className="bg-white p-6 rounded-xl border border-border mb-6">
-          <h2 className="font-semibold text-lg mb-4">지역별 가격 추이</h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={priceChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: number) => `${formatNumber(value)}만원`}
+        {/* Line Chart */}
+        <div className="mb-6 rounded-2xl border border-[#E5E7EB] bg-white p-4">
+          <h2 className="mb-4 text-base font-semibold text-[#1A1A2E]">
+            월별 평균 거래가 추이
+          </h2>
+          {mounted && chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart
+                data={chartData}
+                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12, fill: '#6B7280' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#E5E7EB' }}
                 />
-                <Legend />
-                <Line type="monotone" dataKey="압구정동" stroke="#1B4D8E" strokeWidth={2} />
-                <Line type="monotone" dataKey="청담동" stroke="#10A37F" strokeWidth={2} />
-                <Line type="monotone" dataKey="삼성동" stroke="#F59E0B" strokeWidth={2} />
-                <Line type="monotone" dataKey="대치동" stroke="#8B5CF6" strokeWidth={2} />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#6B7280' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#E5E7EB' }}
+                  tickFormatter={(v: number) =>
+                    v >= 10000 ? `${(v / 10000).toFixed(0)}억` : `${v.toLocaleString()}`
+                  }
+                />
+                <Tooltip
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={(value: any) => [`${Number(value).toLocaleString()}만원`, '평균가']}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  labelFormatter={(label: any) => `${label}`}
+                  contentStyle={{
+                    borderRadius: '12px',
+                    border: '1px solid #E5E7EB',
+                    fontSize: '13px',
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="avgPrice"
+                  stroke="#1B4D8E"
+                  strokeWidth={2.5}
+                  dot={{ fill: '#1B4D8E', r: 4, strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: '#1B4D8E', stroke: '#E3F2FD', strokeWidth: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          ) : mounted && chartData.length === 0 ? (
+            <div className="flex h-[320px] items-center justify-center text-sm text-[#6B7280]">
+              선택된 조건에 해당하는 데이터가 없습니다.
+            </div>
+          ) : (
+            <div className="flex h-[320px] items-center justify-center text-sm text-[#6B7280]">
+              차트 로딩 중...
+            </div>
+          )}
         </div>
 
-        {/* 필터 & 테이블 */}
-        <div className="bg-white p-6 rounded-xl border border-border">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">지역 선택</label>
-              <select
-                value={selectedDong}
-                onChange={(e) => setSelectedDong(e.target.value)}
-                className="w-full px-4 py-2 border border-input-border rounded-lg"
-              >
-                {dongs.map((dong) => (
-                  <option key={dong} value={dong}>
-                    {dong}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">검색</label>
+        {/* Transaction Table */}
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white">
+          {/* Table Header */}
+          <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+            <h2 className="text-base font-semibold text-[#1A1A2E]">
+              거래 내역
+            </h2>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
               <input
                 type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="단지명 또는 동 검색"
-                className="w-full px-4 py-2 border border-input-border rounded-lg"
+                placeholder="단지명 검색"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-xl border border-[#E5E7EB] bg-white py-1.5 pl-9 pr-3 text-sm text-[#1A1A2E] outline-none transition-colors placeholder:text-[#6B7280] focus:border-[#1B4D8E] focus:ring-1 focus:ring-[#1B4D8E]"
               />
             </div>
           </div>
 
+          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-3 font-semibold">거래일</th>
-                  <th className="text-left py-3 px-3 font-semibold">지역</th>
-                  <th className="text-left py-3 px-3 font-semibold">단지명</th>
-                  <th className="text-left py-3 px-3 font-semibold">면적</th>
-                  <th className="text-left py-3 px-3 font-semibold">층</th>
-                  <th className="text-right py-3 px-3 font-semibold">거래가</th>
+                <tr className="border-b border-[#E5E7EB] bg-[#F7F7F8]">
+                  {columns.map((col) => (
+                    <th
+                      key={col.key}
+                      onClick={() => handleSort(col.key)}
+                      className="cursor-pointer px-4 py-2.5 text-left text-xs font-semibold text-[#6B7280] transition-colors hover:text-[#1A1A2E] select-none"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {col.label}
+                        {sortKey === col.key ? (
+                          sortDir === 'asc' ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )
+                        ) : null}
+                      </span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="border-b border-border hover:bg-sidebar transition-colors">
-                    <td className="py-3 px-3">{tx.date}</td>
-                    <td className="py-3 px-3">{tx.dong}</td>
-                    <td className="py-3 px-3">{tx.complex}</td>
-                    <td className="py-3 px-3">{tx.area}㎡</td>
-                    <td className="py-3 px-3">{tx.floor}층</td>
-                    <td className="py-3 px-3 text-right font-semibold text-primary">
-                      {formatCurrency(tx.price * 10000)}
+                {sortedData.length > 0 ? (
+                  sortedData.map((t, i) => (
+                    <tr
+                      key={t.id}
+                      className={`border-b border-[#E5E7EB] transition-colors hover:bg-[#F7F7F8] ${
+                        i % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                      }`}
+                    >
+                      <td className="whitespace-nowrap px-4 py-2.5 text-[#1A1A2E]">
+                        {t.dong}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 font-medium text-[#1A1A2E]">
+                        {t.complex}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-[#1A1A2E]">
+                        {t.area}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-[#1A1A2E]">
+                        {t.floor}층
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 font-semibold text-[#1B4D8E]">
+                        {t.price.toLocaleString()}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-[#6B7280]">
+                        {t.date}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5">
+                        <span className="inline-flex rounded-lg bg-[#E3F2FD] px-2 py-0.5 text-xs font-medium text-[#1B4D8E]">
+                          {t.type}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-4 py-8 text-center text-sm text-[#6B7280]"
+                    >
+                      해당 조건에 맞는 거래 내역이 없습니다.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
 
-          {filteredTransactions.length === 0 && (
-            <div className="text-center py-12 text-text-secondary">
-              검색 결과가 없습니다.
-            </div>
-          )}
+          {/* Table Footer */}
+          <div className="border-t border-[#E5E7EB] px-4 py-2.5 text-xs text-[#6B7280]">
+            총 {sortedData.length}건
+          </div>
         </div>
       </div>
     </div>
