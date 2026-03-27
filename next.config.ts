@@ -1,11 +1,12 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  output: "export",
-  basePath: "/gangnam-realty-demo",
+  output: 'export',
+  trailingSlash: true,
+  basePath: '/gangnam-realty-demo',
   images: {
     unoptimized: true,
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig
