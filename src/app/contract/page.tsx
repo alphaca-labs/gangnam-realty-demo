@@ -94,6 +94,29 @@ const specialClauses = [
   },
 ];
 
+const reportGuideHighlights = [
+  {
+    title: '변경신고',
+    content:
+      '거래지분·면적·거래가격·계약조건·지급일 등 계약 내용이 변경되면 변경신고서를 제출해야 합니다.',
+  },
+  {
+    title: '해제신고',
+    content:
+      '부동산거래계약이 해제된 경우에도 해제신고서를 작성해 제출해야 합니다.',
+  },
+  {
+    title: '별지 및 위임장',
+    content:
+      '대리인 신고나 추가 확인이 필요한 경우 별지(추가서류)와 위임장을 함께 제출할 수 있습니다.',
+  },
+  {
+    title: '인터넷 신고 유의사항',
+    content:
+      '계약대상 면적 변경 없이 거래금액만 변경하는 경우 증빙서류가 필요하며 인터넷 신고가 불가할 수 있습니다.',
+  },
+];
+
 /* ──────────────────────────────────────────────
    Component
    ────────────────────────────────────────────── */
@@ -126,6 +149,51 @@ export default function ContractPage() {
             부동산 전자계약 절차와 필요 서류를 안내합니다
           </p>
         </div>
+
+        {/* ── 계약 신고서 안내 ── */}
+        <section className="mb-8 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground">
+            부동산거래계약 변경·해제 신고 안내
+          </h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            변경신고, 해제신고, 별지·위임장 제출, 신고서 양식 안내를 한 번에 확인하세요.
+          </p>
+
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+            {reportGuideHighlights.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3.5 py-3"
+              >
+                <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  {item.content}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a
+              href="https://www.gangnam.go.kr/board/B_000060/list.do?mid=ID03_010104&pgno=1&lists=10&deptField=BDM_DEPT_ID&deptId=3220178&keyfield=bdm_main_title&keyword="
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary"
+            >
+              신고서/민원서식 보기
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            <a
+              href="https://irts.molit.go.kr/"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary"
+            >
+              RTMS 바로가기
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </section>
 
         {/* ── Type Tabs ── */}
         <Tabs

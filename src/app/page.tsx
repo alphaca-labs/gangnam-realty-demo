@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, type FormEvent } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUp, Building2, CheckSquare, Square } from 'lucide-react';
+import { ArrowUp, Building2, CheckSquare, Square, ExternalLink } from 'lucide-react';
 import {
   scenarios,
   defaultResponse,
@@ -12,6 +13,13 @@ import {
   type ChatMessage,
 } from '@/data/chat-scenarios';
 import { getMonthlyAvgByDong } from '@/data/mock-transactions';
+import {
+  noticeLinks,
+  latestNewsLinks,
+  frequentMenus,
+  quickSiteLinks,
+  channelQuickMenus,
+} from '@/data/channel-home';
 import {
   calculateCommission,
   formatKoreanWon,
@@ -441,38 +449,162 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto">
         {!hasMessages ? (
           /* ---- Initial state: centered welcome ---- */
-          <div className="flex h-full flex-col items-center justify-center px-4">
-            <div className="flex flex-col items-center gap-4 pb-8">
-              {/* Logo */}
+          <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-8">
+            {/* Hero */}
+            <div className="flex flex-col items-center gap-4 text-center">
               <Image src="/gangnam-realty-demo/gangnam-logo.png" alt="강남구" width={72} height={72} className="object-contain" />
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-[#1A1A2E]">
-                  강남부동산톡
-                </h1>
-                <p className="mt-1.5 text-[#6B7280]">
-                  강남 부동산, 무엇이든 물어보세요
+              <div>
+                <h1 className="text-2xl font-bold text-[#1A1A2E] sm:text-3xl">강남부동산톡 v3</h1>
+                <p className="mt-1.5 text-sm text-[#6B7280] sm:text-base">
+                  카카오톡 강남구 부동산정보과 구조를 반영한 웹 고도화 버전
                 </p>
               </div>
             </div>
 
-            {/* Suggestion cards -- 2x2 grid */}
-            <div className="grid w-full max-w-lg grid-cols-2 gap-3 px-2">
-              {suggestionCards.map((card) => (
-                <button
-                  key={card.title}
-                  onClick={() => handleSuggestionClick(card.title)}
-                  className="group flex flex-col gap-1.5 rounded-2xl border border-[#E5E7EB] bg-white p-4 text-left shadow-sm transition-all hover:border-[#1B4D8E] hover:shadow-md"
-                >
-                  <span className="text-xl">{card.icon}</span>
-                  <span className="text-sm font-semibold text-[#1A1A2E] group-hover:text-[#1B4D8E]">
-                    {card.title}
-                  </span>
-                  <span className="text-xs text-[#6B7280]">
-                    {card.subtitle}
-                  </span>
-                </button>
-              ))}
+            {/* 공지사항 + 최신 소식 */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#1A1A2E]">공지사항</h2>
+                <div className="mt-3 space-y-2.5">
+                  {noticeLinks.map((item) => (
+                    <a
+                      key={item.title}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="flex items-start justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3.5 py-3 transition-colors hover:border-[#1B4D8E]"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A1A2E]">{item.title}</p>
+                        {item.description && (
+                          <p className="mt-0.5 text-xs text-[#6B7280]">{item.description}</p>
+                        )}
+                      </div>
+                      <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-[#6B7280]" />
+                    </a>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#1A1A2E]">부동산 관련 최신 소식</h2>
+                <div className="mt-3 space-y-2.5">
+                  {latestNewsLinks.map((item) => (
+                    <a
+                      key={item.title}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="flex items-start justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3.5 py-3 transition-colors hover:border-[#1B4D8E]"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A1A2E]">{item.title}</p>
+                        {item.description && (
+                          <p className="mt-0.5 text-xs text-[#6B7280]">{item.description}</p>
+                        )}
+                      </div>
+                      <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-[#6B7280]" />
+                    </a>
+                  ))}
+                </div>
+              </section>
             </div>
+
+            {/* 자주 찾는 메뉴 */}
+            <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+              <h2 className="text-sm font-bold text-[#1A1A2E]">자주 찾는 메뉴</h2>
+              <div className="mt-3 grid gap-2.5 md:grid-cols-2">
+                {frequentMenus.map((item) =>
+                  item.href ? (
+                    <Link
+                      key={item.title}
+                      href={item.href}
+                      className="rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3.5 py-3 transition-colors hover:border-[#1B4D8E]"
+                    >
+                      <p className="text-sm font-semibold text-[#1A1A2E]">{item.title}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-[#6B7280]">{item.description}</p>
+                    </Link>
+                  ) : (
+                    <a
+                      key={item.title}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] px-3.5 py-3 transition-colors hover:border-[#1B4D8E]"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-[#1A1A2E]">{item.title}</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-[#6B7280]">{item.description}</p>
+                        </div>
+                        <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-[#6B7280]" />
+                      </div>
+                    </a>
+                  )
+                )}
+              </div>
+            </section>
+
+            {/* 사이트 바로가기 + 채널 퀵메뉴 */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#1A1A2E]">사이트 바로가기</h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {quickSiteLinks.map((item) => (
+                    <a
+                      key={item.title}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#1A1A2E] transition-colors hover:border-[#1B4D8E]"
+                    >
+                      {item.title}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#1A1A2E]">채널 퀵메뉴</h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {channelQuickMenus.map((item) => (
+                    <a
+                      key={item.title}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-[#F7F7F8] px-3 py-1.5 text-xs font-medium text-[#1A1A2E] transition-colors hover:border-[#1B4D8E]"
+                    >
+                      {item.title}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            {/* AI 상담 바로가기 */}
+            <section>
+              <h2 className="mb-3 text-sm font-bold text-[#1A1A2E]">AI 상담 바로가기</h2>
+              <div className="grid w-full grid-cols-2 gap-3">
+                {suggestionCards.map((card) => (
+                  <button
+                    key={card.title}
+                    onClick={() => handleSuggestionClick(card.title)}
+                    className="group flex flex-col gap-1.5 rounded-2xl border border-[#E5E7EB] bg-white p-4 text-left shadow-sm transition-all hover:border-[#1B4D8E] hover:shadow-md"
+                  >
+                    <span className="text-xl">{card.icon}</span>
+                    <span className="text-sm font-semibold text-[#1A1A2E] group-hover:text-[#1B4D8E]">
+                      {card.title}
+                    </span>
+                    <span className="text-xs text-[#6B7280]">
+                      {card.subtitle}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         ) : (
           /* ---- Messages list ---- */

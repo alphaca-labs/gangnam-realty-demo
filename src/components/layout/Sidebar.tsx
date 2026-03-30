@@ -5,22 +5,33 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
-  MessageSquare, Calculator, ClipboardList, FileText,
-  LayoutGrid, BarChart3, MapPin, Landmark, Bot,
-  Plus, X, Menu, ChevronLeft,
+  MessageSquare,
+  Calculator,
+  ClipboardList,
+  FileText,
+  LayoutGrid,
+  BarChart3,
+  MapPin,
+  Landmark,
+  Bot,
+  Plus,
+  X,
+  Menu,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { recentChats } from '@/data/chat-scenarios';
+import { quickSiteLinks } from '@/data/channel-home';
 
 const menuItems = [
-  { href: '/', label: 'AI 상담', icon: MessageSquare },
-  { href: '/calculator/', label: '수수료 계산기', icon: Calculator },
-  { href: '/checklist/', label: '확인서 도우미', icon: ClipboardList },
-  { href: '/contract/', label: '전자계약 가이드', icon: FileText },
-  { href: '/examples/', label: '타입별 출력 예시', icon: LayoutGrid },
+  { href: '/', label: '채널 홈', icon: MessageSquare },
+  { href: '/civil/', label: '자주 찾는 안내', icon: Landmark },
+  { href: '/contract/', label: '계약/신고 가이드', icon: FileText },
+  { href: '/calculator/', label: '부동산중개보수', icon: Calculator },
   { href: '/prices/', label: '실거래가 조회', icon: BarChart3 },
   { href: '/map/', label: '부동산 지도', icon: MapPin },
-  { href: '/civil/', label: '민원 가이드', icon: Landmark },
+  { href: '/checklist/', label: '확인서 도우미', icon: ClipboardList },
+  { href: '/examples/', label: '웹 출력 예시', icon: LayoutGrid },
   { href: '/ai-compare/', label: 'AI 상담 고도화', icon: Bot },
 ];
 
@@ -41,7 +52,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4">
         <Image src="/gangnam-realty-demo/gangnam-logo.png" alt="강남구" width={32} height={32} className="object-contain" />
-        <span className="text-base font-semibold text-foreground">강남부동산톡</span>
+        <span className="text-base font-semibold text-foreground">강남부동산톡 v3</span>
       </div>
 
       {/* New Chat Button */}
@@ -58,7 +69,7 @@ export default function Sidebar() {
 
       {/* Menu Items */}
       <div className="px-3 py-2">
-        <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">기능 메뉴</p>
+        <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">메뉴</p>
         <nav className="flex flex-col gap-0.5">
           {menuItems.map((item) => (
             <Link
@@ -79,9 +90,28 @@ export default function Sidebar() {
         </nav>
       </div>
 
+      {/* Site Links */}
+      <div className="border-t px-3 py-3">
+        <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">사이트 바로가기</p>
+        <div className="flex flex-col gap-0.5">
+          {quickSiteLinks.map((item) => (
+            <a
+              key={item.title}
+              href={item.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{item.title}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
       {/* Recent Chats */}
       <div className="mt-auto border-t px-3 py-3">
-        <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">최근 대화</p>
+        <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">자주 묻는 질문</p>
         <div className="flex flex-col gap-0.5">
           {recentChats.map((chat) => (
             <button
