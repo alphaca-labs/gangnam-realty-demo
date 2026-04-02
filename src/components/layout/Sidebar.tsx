@@ -52,7 +52,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4">
         <Image src="/gangnam-realty-demo/gangnam-logo.png" alt="강남구" width={32} height={32} className="object-contain" />
-        <span className="text-base font-semibold text-foreground">강남부동산톡 v3</span>
+        <span className="text-base font-semibold text-foreground">강남부동산톡</span>
       </div>
 
       {/* New Chat Button */}

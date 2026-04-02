@@ -454,7 +454,7 @@ export default function ChatPage() {
             <div className="flex flex-col items-center gap-4 text-center">
               <Image src="/gangnam-realty-demo/gangnam-logo.png" alt="강남구" width={72} height={72} className="object-contain" />
               <div>
-                <h1 className="text-2xl font-bold text-[#1A1A2E] sm:text-3xl">강남부동산톡 v3</h1>
+                <h1 className="text-2xl font-bold text-[#1A1A2E] sm:text-3xl">강남부동산톡</h1>
                 <p className="mt-1.5 text-sm text-[#6B7280] sm:text-base">
                   카카오톡 강남구 부동산정보과 구조를 반영한 웹 고도화 버전
                 </p>
