@@ -197,36 +197,35 @@ export default function ContractPage() {
 
         {/* ── Type Tabs ── */}
         <Tabs
-          defaultValue={0}
+          value={activeType}
           onValueChange={(val) => {
-            const types: ContractType[] = ['매매', '전세', '월세'];
-            setActiveType(types[val as number] ?? '매매');
+            setActiveType(val as ContractType);
             setCheckedDocs({});
           }}
         >
           <TabsList className="mb-8 w-full bg-muted rounded-xl p-1">
             <TabsTrigger
-              value={0}
+              value="매매"
               className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium"
             >
               매매
             </TabsTrigger>
             <TabsTrigger
-              value={1}
+              value="전세"
               className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium"
             >
               전세
             </TabsTrigger>
             <TabsTrigger
-              value={2}
+              value="월세"
               className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium"
             >
               월세
             </TabsTrigger>
           </TabsList>
 
-          {(['매매', '전세', '월세'] as ContractType[]).map((type, idx) => (
-            <TabsContent key={type} value={idx}>
+          {(['매매', '전세', '월세'] as ContractType[]).map((type) => (
+            <TabsContent key={type} value={type}>
               {/* ── 1. Contract Procedure Timeline ── */}
               <section className="mb-10">
                 <h2 className="mb-6 text-lg font-semibold text-foreground">
