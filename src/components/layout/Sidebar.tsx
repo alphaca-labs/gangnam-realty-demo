@@ -18,6 +18,8 @@ import {
   X,
   Menu,
   ExternalLink,
+  UserPlus,
+  Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { recentChats } from '@/data/chat-scenarios';
@@ -31,6 +33,8 @@ const menuItems = [
   { href: '/prices/', label: '실거래가 조회', icon: BarChart3 },
   { href: '/map/', label: '부동산 지도', icon: MapPin },
   { href: '/checklist/', label: '확인서 도우미', icon: ClipboardList },
+  { href: '/employment/', label: '고용신고 도우미', icon: UserPlus },
+  { href: '/business-registration/', label: '개설 등록 도우미', icon: Store },
   { href: '/examples/', label: '웹 출력 예시', icon: LayoutGrid },
   { href: '/ai-compare/', label: 'AI 상담 고도화', icon: Bot },
 ];
