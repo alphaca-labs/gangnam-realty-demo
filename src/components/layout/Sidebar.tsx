@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Calculator,
   ClipboardList,
+  FileCheck,
   FileText,
   LayoutGrid,
   BarChart3,
@@ -26,6 +27,7 @@ import { recentChats } from '@/data/chat-scenarios';
 import { quickSiteLinks } from '@/data/channel-home';
 
 const menuItems = [
+  { href: '/land-permit/', label: '토지거래허가', icon: FileCheck },
   { href: '/', label: '채널 홈', icon: MessageSquare },
   { href: '/civil/', label: '자주 찾는 안내', icon: Landmark },
   { href: '/contract/', label: '계약/신고 가이드', icon: FileText },
