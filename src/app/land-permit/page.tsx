@@ -5,6 +5,8 @@ import {
   FileCheck,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Eye,
   Check,
   Info,
@@ -208,6 +210,7 @@ export default function LandPermitPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [showDownloadSuccess, setShowDownloadSuccess] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [previewDocIndex, setPreviewDocIndex] = useState<number | null>(null);
 
   const [applicationData, setApplicationData] = useState<ApplicationFormData>(initialApplicationData);
   const [landUseSelfData, setLandUseSelfData] = useState<LandUsePlanSelfFormData>(initialLandUseSelfData);
@@ -851,22 +854,51 @@ export default function LandPermitPage() {
             </p>
           </div>
 
-          {/* Document list */}
+          {/* Document list (accordion) */}
           <div className="grid gap-3">
-            {docs.map((doc, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-3 rounded-lg border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1B4D8E] text-xs font-bold text-white">
-                  {idx + 1}
+            {docs.map((doc, idx) => {
+              const isOpen = previewDocIndex === idx;
+              return (
+                <div key={idx} className="overflow-hidden rounded-lg border border-[#E5E7EB]">
+                  {/* Header row */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDocIndex(isOpen ? null : idx)}
+                    className="flex w-full items-center gap-3 bg-[#F7F7F8] px-4 py-3 text-left transition-colors hover:bg-[#EDEDF0]"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1B4D8E] text-xs font-bold text-white shrink-0">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#1A1A2E] truncate">{doc.filename}.pdf</p>
+                    </div>
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-[#1B4D8E] shrink-0">
+                      <Eye className="h-3.5 w-3.5" />
+                      미리보기
+                      {isOpen ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
+                    </span>
+                  </button>
+                  {/* Expanded iframe */}
+                  {isOpen && (
+                    <div className="border-t border-[#E5E7EB] bg-white p-3">
+                      <div className="overflow-hidden rounded-lg border border-[#D1D5DB] shadow-inner">
+                        <iframe
+                          srcDoc={doc.html}
+                          sandbox="allow-same-origin"
+                          title={doc.filename}
+                          className="w-full min-h-[400px] bg-white"
+                          style={{ height: '560px', maxHeight: '70vh' }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#1A1A2E] truncate">{doc.filename}.pdf</p>
-                </div>
-                <FileText className="h-4 w-4 shrink-0 text-[#9CA3AF]" />
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Key info summary */}
