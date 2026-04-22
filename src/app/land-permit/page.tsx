@@ -862,7 +862,7 @@ export default function LandPermitPage() {
                   {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#1A1A2E] truncate">{doc.filename}.html</p>
+                  <p className="text-sm font-medium text-[#1A1A2E] truncate">{doc.filename}.pdf</p>
                 </div>
                 <FileText className="h-4 w-4 shrink-0 text-[#9CA3AF]" />
               </div>
@@ -907,7 +907,7 @@ export default function LandPermitPage() {
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10A37F] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0D8C6D] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             <Download className="h-4 w-4" />
-            {isDownloading ? '생성 중...' : '.zip 다운로드'}
+            {isDownloading ? 'PDF 생성 중...' : '.zip 다운로드 (PDF)'}
           </button>
         </div>
       </div>
