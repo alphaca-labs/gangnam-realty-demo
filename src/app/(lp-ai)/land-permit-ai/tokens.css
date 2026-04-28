@@ -1,0 +1,207 @@
+/* land-permit-ai design tokens — scoped to .lp-ai-root */
+
+.lp-ai-root {
+  --paper: oklch(98.5% 0.008 80);
+  --paper-2: oklch(96.5% 0.012 80);
+  --paper-3: oklch(93% 0.015 80);
+  --line: oklch(89% 0.012 80);
+  --line-2: oklch(82% 0.014 80);
+  --ink: oklch(22% 0.02 250);
+  --ink-2: oklch(40% 0.018 250);
+  --ink-3: oklch(58% 0.012 250);
+  --ink-4: oklch(72% 0.01 250);
+
+  /* GN Deep Blue — 강남구청 brand (Pantone 7687C / R20 G65 B150) */
+  --brand: rgb(20, 65, 150);
+  --brand-2: rgb(46, 92, 180);
+  --brand-soft: oklch(95% 0.028 265);
+  --brand-ink: rgb(15, 48, 110);
+
+  --warm: oklch(76% 0.13 70);
+  --warm-soft: oklch(95% 0.04 75);
+  --warm-ink: oklch(45% 0.11 60);
+
+  --ok: oklch(62% 0.13 155);
+  --ok-soft: oklch(95% 0.04 155);
+  --warn: oklch(68% 0.16 50);
+
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+
+  --shadow-1: 0 1px 0 oklch(80% 0.02 80 / 0.4), 0 2px 8px oklch(40% 0.03 80 / 0.04);
+  --shadow-2: 0 1px 0 oklch(80% 0.02 80 / 0.5), 0 8px 24px oklch(40% 0.04 80 / 0.06);
+
+  --font-sans: var(--lp-font-sans, 'Pretendard'), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: var(--lp-font-serif, 'Gowun Batang'), 'Pretendard', serif;
+  --font-mono: var(--lp-font-mono, 'JetBrains Mono'), ui-monospace, monospace;
+
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01', 'ss03';
+}
+
+.lp-ai-root *,
+.lp-ai-root *::before,
+.lp-ai-root *::after {
+  box-sizing: border-box;
+}
+
+.lp-ai-root button { font-family: inherit; cursor: pointer; }
+.lp-ai-root input,
+.lp-ai-root textarea { font-family: inherit; }
+
+/* Subtle paper texture */
+.lp-ai-root .paper {
+  background:
+    radial-gradient(circle at 1px 1px, oklch(80% 0.02 80 / 0.18) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--paper);
+}
+
+/* Status pill */
+.lp-ai-root .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.lp-ai-root .pill-dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+/* Cards */
+.lp-ai-root .card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-1);
+}
+
+/* Buttons */
+.lp-ai-root .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--r);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all .15s ease;
+  letter-spacing: -0.01em;
+}
+.lp-ai-root .btn-primary {
+  background: var(--brand);
+  color: white;
+}
+.lp-ai-root .btn-primary:hover { background: var(--brand-ink); }
+.lp-ai-root .btn-ghost {
+  background: white;
+  color: var(--ink);
+  border-color: var(--line-2);
+}
+.lp-ai-root .btn-ghost:hover { background: var(--paper-2); }
+.lp-ai-root .btn-soft {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+/* Chip suggestions */
+.lp-ai-root .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: white;
+  border: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all .15s;
+}
+.lp-ai-root .chip:hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+
+/* Scrollbar */
+.lp-ai-root .scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.lp-ai-root .scroll::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 999px;
+}
+.lp-ai-root .scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Typing dots */
+@keyframes lp-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.lp-ai-root .typing-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  background: var(--ink-3);
+  margin: 0 2px;
+  animation: lp-typing 1.2s infinite;
+}
+.lp-ai-root .typing-dot:nth-child(2) { animation-delay: .15s; }
+.lp-ai-root .typing-dot:nth-child(3) { animation-delay: .3s; }
+
+/* Subtle entrance */
+@keyframes lp-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.lp-ai-root .rise { animation: lp-rise .35s ease-out both; }
+
+/* Map placeholder */
+.lp-ai-root .map-tiles {
+  background:
+    linear-gradient(135deg, transparent 48%, oklch(85% 0.04 150 / 0.5) 49%, oklch(85% 0.04 150 / 0.5) 51%, transparent 52%),
+    linear-gradient(45deg, transparent 48%, oklch(85% 0.04 150 / 0.4) 49%, oklch(85% 0.04 150 / 0.4) 51%, transparent 52%),
+    repeating-linear-gradient(0deg, transparent 0 30px, oklch(80% 0.03 90 / 0.3) 30px 31px),
+    repeating-linear-gradient(90deg, transparent 0 30px, oklch(80% 0.03 90 / 0.3) 30px 31px),
+    oklch(96% 0.025 110);
+}
+
+/* Focus rings */
+.lp-ai-root input:focus,
+.lp-ai-root textarea:focus,
+.lp-ai-root button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Mark highlight */
+.lp-ai-root .mark {
+  background: linear-gradient(transparent 60%, var(--warm-soft) 60%);
+  padding: 0 2px;
+}
+
+/* Tabular numbers */
+.lp-ai-root .tnum { font-variant-numeric: tabular-nums; }
+
+/* Logo mark */
+.lp-ai-root .logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: var(--brand);
+  color: white;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.04em;
+}

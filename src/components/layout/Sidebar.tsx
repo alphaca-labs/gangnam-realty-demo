@@ -15,6 +15,7 @@ import {
   MapPin,
   Landmark,
   Bot,
+  Sparkles,
   Plus,
   X,
   Menu,
@@ -28,6 +29,7 @@ import { quickSiteLinks } from '@/data/channel-home';
 
 const menuItems = [
   { href: '/land-permit/', label: '토지거래허가', icon: FileCheck },
+  { href: '/land-permit-ai/', label: '토지거래허가 (AI 챗봇)', icon: Sparkles },
   { href: '/', label: '채널 홈', icon: MessageSquare },
   { href: '/civil/', label: '자주 찾는 안내', icon: Landmark },
   { href: '/contract/', label: '계약/신고 가이드', icon: FileText },
@@ -45,19 +47,16 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const basePath = '/gangnam-realty-demo';
-
   function isActive(href: string) {
-    const fullPath = basePath + href;
-    if (href === '/') return pathname === basePath || pathname === basePath + '/';
-    return pathname.startsWith(fullPath);
+    if (href === '/') return pathname === '/' || pathname === '';
+    return pathname.startsWith(href);
   }
 
   const sidebarContent = (
     <>
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4">
-        <Image src="/gangnam-realty-demo/gangnam-logo.png" alt="강남구" width={32} height={32} className="object-contain" />
+        <Image src="/gangnam-logo.png" alt="강남구" width={32} height={32} className="object-contain" />
         <span className="text-base font-semibold text-foreground">강남부동산톡</span>
       </div>
 

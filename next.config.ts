@@ -1,8 +1,6 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  output: "export",
-  basePath: "/gangnam-realty-demo",
   trailingSlash: true,
   images: {
     unoptimized: true,

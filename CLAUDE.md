@@ -6,10 +6,15 @@ ChatGPT 웹 UI 스타일의 AI 부동산 상담 데모 사이트.
 
 ## Key Rules
 - **한국어 UI** — 모든 텍스트 한국어
-- **Static Export** — GitHub Pages 배포 (output: 'export', basePath: '/gangnam-realty-demo')
-- **No API calls** — 모든 데이터 하드코딩/목데이터
+- **No API calls (default)** — 데모 데이터는 하드코딩/목데이터. 예외: `src/features/land-permit-ai/`는 server-side에서 Gemini/Kakao/VWorld API 호출(`/api/gemini/chat` 라우트, `GEMINI/KAKAO_REST/VWORLD_API_KEY` env). 키 미설정 시 Mock fallback.
+- **Server-side 외부 API 키 보호** — `process.env.{GEMINI,VWORLD,KAKAO_REST}_API_KEY` 등 외부 서비스 키는 `src/app/api/**`와 `src/features/*/llm/**`에서만 참조. 클라이언트 코드/`NEXT_PUBLIC_*` 노출 금지. 가급적 키별 단일 소유 모듈 1곳에서만 read.
+- **server-only 모듈 격리** — 외부 API 호출/시크릿 read를 수행하는 모듈(`src/features/*/llm/lookup/**`, `llm/auto-*.ts` 등)은 파일 첫 줄 `import 'server-only'` 강제. 클라이언트 번들 leak을 빌드 단계에서 차단.
 - **Mobile First** — 반응형 필수
-- **ChatGPT 스타일** — 사이드바 + 채팅 UI + 리치 응답
+- **ChatGPT 스타일 (메인 라우트)** — `src/app/(main)/**`는 사이드바 + 채팅 UI + 리치 응답. `src/app/(lp-ai)/land-permit-ai/**`는 자체 디자인 토큰/레이아웃 사용(별도 chrome).
+- **Route Group 다중 chrome 격리** — 같은 repo에서 다른 layout/디자인이 필요하면 `src/app/(group-name)/...` route group + 그룹별 자체 `layout.tsx` 사용. URL 변화 없음. 라우트 추가 시 다른 그룹 회귀 0건 자동 보장.
+- **디자인 토큰 root scope 격리** — 외부 디자인 시스템 토큰은 `:root`가 아닌 컴포넌트 root 클래스(`.{feature}-root`)에 scope. globals.css/Tailwind 침범 금지. `@keyframes`도 feature prefix로 충돌 회피.
+- **Feature 모듈 분리** — `src/features/{name}/*`의 핵심 코어(`types/llm/state/share/utils`)는 `next/*` import 금지(환경 무관). Next 종속은 `src/app/**` 라우트/페이지에서만.
+- **Zod v4 JSON Schema** — `zod-to-json-schema` 외부 패키지 금지. 내장 `z.toJSONSchema(schema, { target: 'draft-7' })` 사용.
 
 ## Tech Stack
 - Next.js 15 (App Router)
@@ -21,41 +26,3 @@ ChatGPT 웹 UI 스타일의 AI 부동산 상담 데모 사이트.
 
 ## 상세 기획서
 SPEC.md 참조. 반드시 읽고 따를 것.
-EOF 
-
-# Claude Code 실행
-claude --permission-mode bypassPermissions --print "
-기존 v1 코드를 전부 삭제하고 v2로 새로 만들어야 합니다.
-
-SPEC.md를 읽고 강남부동산톡 웹버전 v2를 처음부터 완전히 새로 개발하세요.
-
-## 핵심 요구사항
-
-1.  **ChatGPT 웹 스타일 레이아웃**
-2.  **메인 채팅 페이지** (5개 시나리오 하드코딩)
-3.  **기능별 8개 샘플 페이지** (사이드바 메뉴)
-    ① 중개수수료 계산기 (실동작)
-    ② 중개대상물 확인서 (목업)
-    ③ 전자계약 가이드
-    ④ 웹버전 타입별 출력 예시
-    ⑤ 실거래가 대시보드 (Recharts)
-    ⑥ 부동산 지도 (정적 이미지 기반)
-    ⑦ 민원 절차 가이드
-    ⑧ AI 상담 고도화 비교
-4.  **디자인**: ChatGPT 스타일, 강남구 블루(#1B4D8E) + 그린(#10A37F) 포인트
-5.  **기술**: Next.js 15, Tailwind, shadcn/ui. **Static export**로 GitHub Pages 배포.
-
-## 작업 순서
-1. 기존 코드(app/, components/ 등) 삭제
-2.  구조로 새로 생성
-3. 패키지 설치
-4. 레이아웃(사이드바) -> 메인 채팅 -> 기능 페이지 순으로 구현
-5. 
-> gangnam-realty-temp@0.1.0 build
-> next build로 빌드 확인
-6. 완료 후 , , 
-
-완료되면, ok 명령어를 실행하여 알려주세요.
-" > "/Users/alphaca/.openclaw/workspace/logs/gangnam-realty-v2-1774590561.log" 2>&1
-
-echo "Log file: /Users/alphaca/.openclaw/workspace/logs/gangnam-realty-v2-1774590561.log"

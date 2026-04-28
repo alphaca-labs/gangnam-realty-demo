@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Sidebar from '@/components/layout/Sidebar';
 
 export const metadata: Metadata = {
   title: '강남부동산톡 | AI 부동산 상담',
@@ -22,12 +21,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
-      <body className="flex h-dvh overflow-hidden">
-        <Sidebar />
-        <main className="flex flex-1 flex-col overflow-hidden">
-          {children}
-        </main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
