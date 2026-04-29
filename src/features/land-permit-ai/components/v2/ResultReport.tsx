@@ -16,6 +16,7 @@ interface ResultReportProps {
   answers: Answers;
   isComplete: boolean;
   missingCount: number;
+  sharedNotice?: boolean;
   onClose: () => void;
   onShareQr: () => void;
 }
@@ -50,6 +51,7 @@ export function ResultReport({
   answers,
   isComplete,
   missingCount,
+  sharedNotice = false,
   onClose,
   onShareQr,
 }: ResultReportProps) {
@@ -169,6 +171,41 @@ export function ResultReport({
         style={{ padding: '32px 36px 56px', maxWidth: 1080, margin: '0 auto' }}
         className="lp-result-inner"
       >
+        {sharedNotice ? (
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: 'var(--paper-2)',
+              border: '1px solid var(--line-2)',
+              fontSize: 13,
+              color: 'var(--ink-2)',
+              marginBottom: 16,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span>
+              다른 분이 공유한 신청서를 검토 중입니다.
+              {missingCount > 0
+                ? ` 미입력 ${missingCount}건이 있어 일부 항목이 비어 있을 수 있습니다.`
+                : ''}
+            </span>
+            {missingCount > 0 ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: '4px 10px', fontSize: 12 }}
+                onClick={onClose}
+              >
+                채팅으로 이어서 작성
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <div
           style={{
             display: 'flex',

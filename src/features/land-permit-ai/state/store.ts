@@ -3,6 +3,13 @@
 import type { CaseType } from '@/data/land-permit';
 import type { Answers } from '../types/answers';
 import type { ChatMessage } from '../types/message';
+import {
+  encryptJson,
+  decryptJson,
+  isEncryptedEnvelope,
+  clearEncKey,
+  isCryptoAvailable,
+} from './crypto-store';
 
 export type ChatStatus =
   | 'idle'
@@ -58,6 +65,7 @@ export type ChatAction =
       missingFields: string[];
       isComplete: boolean;
       messages: ChatMessage[];
+      fromShare?: boolean;
     };
 
 export function chatReducer(state: ChatState, action: ChatAction): ChatState {
@@ -125,7 +133,11 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         missingFields: action.missingFields,
         isComplete: action.isComplete,
         messages: action.messages,
-        status: action.isComplete ? 'completing' : 'asking',
+        status: action.fromShare
+          ? 'reviewing'
+          : action.isComplete
+            ? 'completing'
+            : 'asking',
       };
     default:
       return state;
@@ -161,32 +173,73 @@ function maskRrnDeep(value: unknown): unknown {
   return value;
 }
 
-export function persistSession(state: ChatState): void {
+function buildMaskedPayload(state: ChatState): PersistedSession {
+  return {
+    caseType: state.caseType,
+    answers: maskRrnDeep(state.answers) as Answers,
+    missingFields: state.missingFields,
+    isComplete: state.isComplete,
+    messages: state.messages.map((m) => ({
+      ...m,
+      content: maskRrnInString(m.content),
+    })),
+  };
+}
+
+function isPersistedSession(value: unknown): value is PersistedSession {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    'caseType' in v &&
+    'answers' in v &&
+    'missingFields' in v &&
+    'isComplete' in v &&
+    'messages' in v
+  );
+}
+
+export async function persistSession(state: ChatState): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
-    const payload: PersistedSession = {
-      caseType: state.caseType,
-      answers: maskRrnDeep(state.answers) as Answers,
-      missingFields: state.missingFields,
-      isComplete: state.isComplete,
-      messages: state.messages.map((m) => ({
-        ...m,
-        content: maskRrnInString(m.content),
-      })),
-    };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    // mask → encrypt order is mandatory (PII masking precedes encryption envelope)
+    const masked = buildMaskedPayload(state);
+    if (isCryptoAvailable()) {
+      const env = await encryptJson(masked);
+      if (env) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(env));
+        return;
+      }
+    }
+    // fallback: plaintext (non-secure context, etc.) — still masked
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(masked));
   } catch {
     /* storage may be unavailable */
   }
 }
 
-export function loadSession(): PersistedSession | null {
+export async function loadSession(): Promise<PersistedSession | null> {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedSession;
-    if (!parsed || typeof parsed !== 'object') return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (isEncryptedEnvelope(parsed)) {
+      const dec = await decryptJson<PersistedSession>(parsed);
+      if (!dec || !isPersistedSession(dec)) return null;
+      return dec;
+    }
+    // legacy plaintext — migrate by re-encrypting in place
+    if (!isPersistedSession(parsed)) return null;
+    if (isCryptoAvailable()) {
+      const env = await encryptJson(parsed);
+      if (env) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(env));
+        } catch {
+          /* migration write failure is non-fatal */
+        }
+      }
+    }
     return parsed;
   } catch {
     return null;
@@ -200,6 +253,7 @@ export function clearSession(): void {
   } catch {
     /* ignore */
   }
+  clearEncKey();
 }
 
 export { maskRrnInString };

@@ -16,6 +16,7 @@ ChatGPT 웹 UI 스타일의 AI 부동산 상담 데모 사이트.
 - **Feature 모듈 분리** — `src/features/{name}/*`의 핵심 코어(`types/llm/state/share/utils`)는 `next/*` import 금지(환경 무관). Next 종속은 `src/app/**` 라우트/페이지에서만.
 - **Zod v4 JSON Schema** — `zod-to-json-schema` 외부 패키지 금지. 내장 `z.toJSONSchema(schema, { target: 'draft-7' })` 사용.
 - **PII 위젯 마스킹 정합성** — split-id 등 분할 입력 위젯이 합성한 값(`${front}-${back}`)은 PII 마스킹 정규식(`maskRrnInString`의 `\d{6}-\d{7}`)과 1:1 일치해야 하고, `isFilled`로 부분 제출(평문 leak)을 차단한다. 단일 chokepoint(Composer→sendMessage)에서만 마스킹.
+- **PII at-rest 암호화 (localStorage)** — `src/features/*/state/`의 PII 포함 세션 persist는 Web Crypto AES-GCM(envelope `{v,iv,ct}`) + 디바이스 자동 키(JWK localStorage)로 암호화. 순서는 **mask → encrypt** 고정(평문이 envelope 안에 들어가지 않도록 `buildMaskedPayload` 후 `encryptJson`). `loadSession`/`persistSession`은 async, 평문 envelope 자동 마이그레이션. secure context(HTTPS/localhost) 외 평문 fallback 허용(보안 한계는 모듈 주석 명시). 공유 hash(`#share=…`)는 **비암호화 의도**(타인 공유)이므로 envelope 미적용 — share/persist 책임 경계 분리.
 
 ## Tech Stack
 - Next.js 15 (App Router)

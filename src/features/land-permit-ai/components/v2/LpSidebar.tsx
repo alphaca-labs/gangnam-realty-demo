@@ -16,6 +16,7 @@ export interface LpSession {
 interface LpSidebarProps {
   sessions: LpSession[];
   onNew: () => void;
+  onDelete?: () => void;
   open: boolean;
   onClose: () => void;
 }
@@ -27,7 +28,7 @@ const MOCK_SESSIONS: LpSession[] = [
   { id: 'm-4', title: '잠원동 토지 분할 상담', date: '지난 주', status: '완료', isMock: true },
 ];
 
-export function LpSidebar({ sessions, onNew, open, onClose }: LpSidebarProps) {
+export function LpSidebar({ sessions, onNew, onDelete, open, onClose }: LpSidebarProps) {
   const list = sessions.length > 0 ? sessions : MOCK_SESSIONS;
 
   return (
@@ -168,6 +169,33 @@ export function LpSidebar({ sessions, onNew, open, onClose }: LpSidebarProps) {
             </button>
           ))}
         </div>
+
+        {onDelete ? (
+          <div
+            style={{
+              padding: '8px 12px',
+              borderTop: '1px solid var(--line)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={onDelete}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--ink-3)',
+                fontSize: 12,
+                padding: '6px 8px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                borderRadius: 6,
+              }}
+            >
+              내역 모두 삭제
+            </button>
+          </div>
+        ) : null}
 
         <div
           style={{

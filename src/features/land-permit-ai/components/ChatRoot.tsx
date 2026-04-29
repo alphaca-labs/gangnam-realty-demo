@@ -90,6 +90,7 @@ function ChatRootInner() {
   const [qrOpen, setQrOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sharedNotice, setSharedNotice] = useState(false);
   const [sessions] = useState<LpSession[]>([]);
   const lastUserMessageRef = useRef<string>('');
   const prevProgressRef = useRef<number>(0);
@@ -100,46 +101,52 @@ function ChatRootInner() {
     if (hydrated) return;
     setHydrated(true);
     if (typeof window === 'undefined') return;
-    const token = readHashToken();
-    if (token) {
-      const decoded = decodeShareToken(token);
-      if (decoded && decoded.caseType) {
-        const missing = computeMissingFields(
-          decoded.caseType,
-          decoded.answers as Record<string, unknown>,
-        );
-        const greeting = buildGreeting(decoded.caseType);
+    void (async () => {
+      const token = readHashToken();
+      if (token) {
+        const decoded = decodeShareToken(token);
+        if (decoded && decoded.caseType) {
+          const missing = computeMissingFields(
+            decoded.caseType,
+            decoded.answers as Record<string, unknown>,
+          );
+          const greeting = buildGreeting(decoded.caseType);
+          dispatch({
+            type: 'HYDRATE_FROM_URL',
+            caseType: decoded.caseType,
+            answers: decoded.answers,
+            missingFields: missing,
+            isComplete: missing.length === 0,
+            messages: [greeting],
+            fromShare: true,
+          });
+          clearHashToken();
+          setSharedNotice(true);
+          return;
+        }
+        clearHashToken();
+      }
+      const persisted = await loadSession();
+      if (persisted && persisted.caseType) {
         dispatch({
           type: 'HYDRATE_FROM_URL',
-          caseType: decoded.caseType,
-          answers: decoded.answers,
-          missingFields: missing,
-          isComplete: missing.length === 0,
-          messages: [greeting],
+          caseType: persisted.caseType,
+          answers: persisted.answers,
+          missingFields: persisted.missingFields,
+          isComplete: persisted.isComplete,
+          messages:
+            persisted.messages.length > 0
+              ? persisted.messages
+              : [buildGreeting(persisted.caseType)],
         });
-        clearHashToken();
-        return;
       }
-      clearHashToken();
-    }
-    const persisted = loadSession();
-    if (persisted && persisted.caseType) {
-      dispatch({
-        type: 'HYDRATE_FROM_URL',
-        caseType: persisted.caseType,
-        answers: persisted.answers,
-        missingFields: persisted.missingFields,
-        isComplete: persisted.isComplete,
-        messages:
-          persisted.messages.length > 0 ? persisted.messages : [buildGreeting(persisted.caseType)],
-      });
-    }
+    })();
   }, [hydrated]);
 
   // Persist on every meaningful change
   useEffect(() => {
     if (!hydrated) return;
-    if (state.caseType) persistSession(state);
+    if (state.caseType) void persistSession(state);
   }, [state, hydrated]);
 
   const selectCase = useCallback((caseType: CaseType) => {
@@ -169,6 +176,7 @@ function ChatRootInner() {
 
       dispatch({ type: 'SEND_START', userMessage: userMsg });
       setInput('');
+      setSharedNotice(false);
 
       const history = state.messages.map((m) => ({ role: m.role, content: m.content }));
 
@@ -288,6 +296,24 @@ function ChatRootInner() {
     setInput('');
     setAutoLookup(null);
     setDrawerOpen(false);
+    setSharedNotice(false);
+    prevProgressRef.current = 0;
+    lastStepEmittedRef.current = -1;
+  };
+
+  const handleDeleteAll = () => {
+    if (typeof window === 'undefined') return;
+    const ok = window.confirm(
+      '저장된 모든 대화/생성 내역을 삭제할까요? 되돌릴 수 없습니다.',
+    );
+    if (!ok) return;
+    clearSession();
+    dispatch({ type: 'RESET' });
+    setConfidence(undefined);
+    setAutoLookup(null);
+    setInput('');
+    setSharedNotice(false);
+    setDrawerOpen(false);
     prevProgressRef.current = 0;
     lastStepEmittedRef.current = -1;
   };
@@ -333,6 +359,7 @@ function ChatRootInner() {
       <LpSidebar
         sessions={sessions}
         onNew={handleReset}
+        onDelete={handleDeleteAll}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
       />
@@ -353,7 +380,11 @@ function ChatRootInner() {
             answers={state.answers}
             isComplete={state.isComplete}
             missingCount={state.missingFields.length}
-            onClose={() => dispatch({ type: 'CLOSE_REVIEW' })}
+            sharedNotice={sharedNotice}
+            onClose={() => {
+              setSharedNotice(false);
+              dispatch({ type: 'CLOSE_REVIEW' });
+            }}
             onShareQr={() => setQrOpen(true)}
           />
         ) : (
