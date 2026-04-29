@@ -19,8 +19,18 @@ export interface FieldDescriptor {
   hint?: string;
   help?: string;
   required?: boolean;
-  type?: 'text' | 'number' | 'tel' | 'boolean' | 'consent' | 'id';
+  type?:
+    | 'text'
+    | 'number'
+    | 'tel'
+    | 'boolean'
+    | 'consent'
+    | 'id'
+    | 'radio'
+    | 'select'
+    | 'split-id';
   value?: string;
+  options?: { value: string; label: string }[];
 }
 
 export interface ChoiceDef {

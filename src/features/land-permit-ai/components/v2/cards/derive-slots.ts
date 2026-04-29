@@ -93,8 +93,17 @@ const ID_PATHS = new Set([
   'proxy.agentIdNumber',
 ]);
 
+const RADIO_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  'application.rightType': [
+    { value: '소유권', label: '소유권' },
+    { value: '지상권', label: '지상권' },
+  ],
+  // 추가 발견 시 여기에 등록
+};
+
 function fieldType(path: string): FieldDescriptor['type'] {
-  if (ID_PATHS.has(path)) return 'id';
+  if (ID_PATHS.has(path)) return 'split-id';
+  if (RADIO_OPTIONS[path]) return 'radio';
   if (BOOLEAN_PATHS.has(path)) return 'boolean';
   if (CONSENT_PATHS.has(path)) return 'consent';
   if (PHONE_PATHS.has(path)) return 'tel';
@@ -103,7 +112,7 @@ function fieldType(path: string): FieldDescriptor['type'] {
 }
 
 function fieldPlaceholder(path: string, type: FieldDescriptor['type']): string | undefined {
-  if (type === 'id') return '990101-1******';
+  if (type === 'id' || type === 'split-id') return '990101-1******';
   if (type === 'tel') return '010-1234-5678';
   if (path === 'application.landArea') return '예: 165';
   if (
@@ -119,7 +128,7 @@ function fieldPlaceholder(path: string, type: FieldDescriptor['type']): string |
 }
 
 function fieldHelp(path: string, type: FieldDescriptor['type']): string | undefined {
-  if (type === 'id') return '뒷자리는 자동 마스킹됩니다';
+  if (type === 'id' || type === 'split-id') return '뒷자리는 자동 마스킹됩니다';
   return undefined;
 }
 
@@ -215,6 +224,7 @@ export function deriveSlots(
         placeholder: fieldPlaceholder(p, t),
         help: fieldHelp(p, t),
         required: true,
+        options: t === 'radio' ? RADIO_OPTIONS[p] : undefined,
       };
     });
     slots.push({

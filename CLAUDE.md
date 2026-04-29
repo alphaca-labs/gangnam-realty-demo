@@ -15,6 +15,7 @@ ChatGPT 웹 UI 스타일의 AI 부동산 상담 데모 사이트.
 - **디자인 토큰 root scope 격리** — 외부 디자인 시스템 토큰은 `:root`가 아닌 컴포넌트 root 클래스(`.{feature}-root`)에 scope. globals.css/Tailwind 침범 금지. `@keyframes`도 feature prefix로 충돌 회피.
 - **Feature 모듈 분리** — `src/features/{name}/*`의 핵심 코어(`types/llm/state/share/utils`)는 `next/*` import 금지(환경 무관). Next 종속은 `src/app/**` 라우트/페이지에서만.
 - **Zod v4 JSON Schema** — `zod-to-json-schema` 외부 패키지 금지. 내장 `z.toJSONSchema(schema, { target: 'draft-7' })` 사용.
+- **PII 위젯 마스킹 정합성** — split-id 등 분할 입력 위젯이 합성한 값(`${front}-${back}`)은 PII 마스킹 정규식(`maskRrnInString`의 `\d{6}-\d{7}`)과 1:1 일치해야 하고, `isFilled`로 부분 제출(평문 leak)을 차단한다. 단일 chokepoint(Composer→sendMessage)에서만 마스킹.
 
 ## Tech Stack
 - Next.js 15 (App Router)
