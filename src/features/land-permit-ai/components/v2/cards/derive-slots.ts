@@ -41,8 +41,15 @@ export const FIELD_LABEL: Record<string, string> = {
   'landUseTax.buyerMoveInPlan': '매수인 입주 계획',
   'landUseTax.buyerDepositReturnPlan': '보증금 반환 계획',
   'funding.depositAmount': '예금 금액',
+  'funding.stockAmount': '주식·채권 매각',
+  'funding.giftAmount': '증여·상속',
   'funding.cashAmount': '현금 금액',
+  'funding.propertyDisposalAmount': '부동산 처분',
+  'funding.compensationAmount': '보상금',
   'funding.mortgageLoan': '담보 대출',
+  'funding.creditLoan': '신용 대출',
+  'funding.otherLoan': '기타 대출',
+  'funding.otherBorrowing': '기타 차입금',
   'privacy.consent1': '개인정보 수집·이용 동의',
   'privacy.consent2': '제3자 제공 동의',
   'privacy.consent3': '보유·이용기간 동의',
@@ -69,8 +76,15 @@ const NUMBER_PATHS = new Set([
   'application.landArea',
   'application.contractAmount',
   'funding.depositAmount',
+  'funding.stockAmount',
+  'funding.giftAmount',
   'funding.cashAmount',
+  'funding.propertyDisposalAmount',
+  'funding.compensationAmount',
   'funding.mortgageLoan',
+  'funding.creditLoan',
+  'funding.otherLoan',
+  'funding.otherBorrowing',
 ]);
 
 const BOOLEAN_PATHS = new Set([
@@ -115,12 +129,7 @@ function fieldPlaceholder(path: string, type: FieldDescriptor['type']): string |
   if (type === 'id' || type === 'split-id') return '990101-1******';
   if (type === 'tel') return '010-1234-5678';
   if (path === 'application.landArea') return '예: 165';
-  if (
-    path === 'application.contractAmount' ||
-    path === 'funding.depositAmount' ||
-    path === 'funding.cashAmount' ||
-    path === 'funding.mortgageLoan'
-  )
+  if (path === 'application.contractAmount' || path.startsWith('funding.'))
     return '예: 1500000000 또는 15억';
   if (path.endsWith('Address')) return '예: 서울특별시 강남구 압구정동 123-45';
   if (path.endsWith('Name')) return '예: 홍길동';
