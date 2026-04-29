@@ -57,6 +57,7 @@ export interface AssistantTurnContext {
   text: string;
   autoLookup?: AutoLookupMeta | null;
   missingFields: string[];
+  askFields?: string[];
   isComplete: boolean;
   caseType: CaseType | null;
   answers: Answers;

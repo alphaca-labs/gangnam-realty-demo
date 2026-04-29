@@ -198,9 +198,15 @@ export function deriveSlots(
     }
   }
 
-  // 2) form slot when 1~3 missing fields
-  if (!ctx.isComplete && ctx.missingFields.length >= 1 && ctx.missingFields.length <= 3) {
-    const fields: FieldDescriptor[] = ctx.missingFields.map((p) => {
+  // 2) form slot — prefer LLM-driven askFields (1~6), fallback to missingFields (≤3)
+  const ask =
+    ctx.askFields && ctx.askFields.length > 0
+      ? ctx.askFields
+      : ctx.missingFields.length <= 3
+        ? ctx.missingFields
+        : [];
+  if (!ctx.isComplete && ask.length >= 1 && ask.length <= 6) {
+    const fields: FieldDescriptor[] = ask.map((p) => {
       const t = fieldType(p);
       return {
         path: p,

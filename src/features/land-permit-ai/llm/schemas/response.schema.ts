@@ -28,6 +28,13 @@ export const zAssistantResponse = z.object({
   missingFields: z.array(z.string()),
   isComplete: z.boolean(),
   confidence: z.record(z.string(), zConfidence).optional(),
+  askFields: z
+    .array(z.string())
+    .max(6)
+    .optional()
+    .describe(
+      '이번 턴에 사용자에게 입력 폼으로 받을 필드의 dot-path 목록 (1~6개). 비워두면 자유 텍스트 대화.',
+    ),
 });
 
 export type AssistantResponse = z.infer<typeof zAssistantResponse>;
@@ -82,5 +89,12 @@ export function buildResponseSchemaForCase(caseType: CaseType) {
     missingFields: z.array(z.string()),
     isComplete: z.boolean(),
     confidence: z.record(z.string(), zConfidence).optional(),
+    askFields: z
+      .array(z.string())
+      .max(6)
+      .optional()
+      .describe(
+        '이번 턴에 사용자에게 입력 폼으로 받을 필드의 dot-path 목록 (1~6개). 비워두면 자유 텍스트 대화.',
+      ),
   });
 }

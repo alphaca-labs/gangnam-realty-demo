@@ -33,6 +33,7 @@ interface ApiSuccess {
   missingFields: string[];
   isComplete: boolean;
   confidence?: Record<string, 'high' | 'medium' | 'low'>;
+  askFields?: string[];
   autoLookup?: {
     applied: boolean;
     source: 'vworld' | 'mock' | 'skipped' | 'failed';
@@ -152,6 +153,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiSuccess | 
     missingFields,
     isComplete,
     confidence: result.data.confidence,
+    askFields: result.data.askFields,
     autoLookup,
   });
 }

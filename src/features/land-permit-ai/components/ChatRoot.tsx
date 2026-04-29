@@ -41,6 +41,7 @@ interface ChatApiSuccess {
   missingFields: string[];
   isComplete: boolean;
   confidence?: Record<string, 'high' | 'medium' | 'low'>;
+  askFields?: string[];
   autoLookup?: AutoLookupMeta;
 }
 
@@ -218,6 +219,7 @@ function ChatRootInner() {
             text: data.assistantMessage,
             autoLookup: data.autoLookup ?? null,
             missingFields: data.missingFields,
+            askFields: data.askFields,
             isComplete: data.isComplete,
             caseType: state.caseType,
             answers: data.mergedAnswers,

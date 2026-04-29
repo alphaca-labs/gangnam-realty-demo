@@ -271,3 +271,49 @@ Gemini 챗봇이 사용자 메시지에서 토지 주소(시·도/구·군/읍·
 - **RichSlot `'choice'` kind 제거**: 현재 미사용. union에서 제거 또는 ChoiceCard 통합 분기.
 - **MapPanel v2.1 검토**: 현재 정적 이미지 기반 → 디자인 토큰과의 정합성 재평가.
 - **`'ts'` vs `'timestamp'` doc**: 코드와 문서 표기 정합 정리(동작 영향 없음).
+
+---
+
+## 2026-04-29 — 005 land-permit-ai askFields (LLM-driven UI 의도 신호)
+
+### Summary
+land-permit-ai 채팅에서 LLM이 누락 정보를 텍스트로 나열하던 패턴을, 응답 스키마에 `askFields: string[]` (1~6 dot-paths) 신호 필드를 추가하여 derive-slots가 자동으로 FormCard 입력 버블을 생성하도록 변경. 기존 `missingFields ≤ 3` heuristic은 fallback으로 보존(3-tier graceful: askFields → missingFields → no-op). 6 files / +29/-4. 백엔드 contract(`ApiSuccess`)와 클라이언트 `AssistantTurnContext` 양쪽에 `askFields?: string[]` 추가, system-prompt 규칙 #4를 폼 자동 표시 안내로 교체. 004 코어/디자인 토큰/answer-mapper/auto-lookup 변경 0.
+
+### What Went Well
+- **Zod `.describe()` → JSON Schema description → Gemini structured output 이중 신호**: `z.toJSONSchema(schema, { target: 'draft-7' })`는 `.describe()`의 한국어 설명을 JSON Schema `description`으로 그대로 보존. 시스템 프롬프트의 규칙 #4와 스키마 description이 동일한 의도를 두 channel로 강제 → LLM 준수율 ↑.
+- **3-tier graceful fallback로 회귀 차단**: `askFields(1~6) > missingFields(≤3) > []` 우선순위. 기존 heuristic 그대로 살려 LLM이 신호를 안 보내도 동작. 신규 신호 도입 시 기본값.
+- **두 스키마 동기화 확인**: `zAssistantResponse`(generic)와 `buildResponseSchemaForCase`(per-case dynamic) 양쪽에 동일 필드 추가. case-별 좁은 스키마가 generic을 가리는 구조이므로 한 쪽만 추가하면 누락 — 둘 다 패치.
+- **Per-turn LLM-driven UI 신호**: heuristic(`missingFields.length <= 3`)은 모든 턴에서 같은 임계값으로 자동 폼 표시 ↔ LLM이 컨텍스트 보고 직접 "이번 턴엔 폼"을 결정하는 게 더 정확. 예: 자유 대화 턴은 askFields 비움.
+- **assistantMessage 30자 제한**: 폼 자동 표시 후 텍스트 안에서 필드명 반복 나열하는 LLM 습관을 시스템 프롬프트로 차단. 폼 ↔ 텍스트 중복 안내 회피.
+
+### Problems & Solutions
+- **이중 스키마 함정(Generic vs Per-case)**: `buildResponseSchemaForCase`가 case별 좁은 shape을 만들 때 generic `zAssistantResponse`를 상속/extend하지 않고 평행 정의. → 새 필드는 양쪽에 동시에 추가해야 함. 현재는 코드 중복으로 해결, 추후 base shape 추출 후 extend로 통합 검토.
+- **derive-slots 분기 우선순위 결정**: `askFields ≥ 1`이면 missingFields와 무관하게 폼 표시할지 vs missingFields도 같이 검토. → 결정: askFields가 명시되면 그것만 사용(LLM 의도 우선), 없을 때만 heuristic. 1번 발화 1폼 일관성.
+- **passthrough 필요성**: route.ts에서 Zod validate 후 `askFields`를 응답에 그대로 전달해야 함. validate가 unknown key를 strip하지 않도록 schema에 명시(현재 z.object 기본은 strip이지만 askFields가 schema에 정의되어 있으니 통과).
+
+### Key Patterns (코드 보면 알 수 있는 디테일 — CLAUDE.md에는 미포함)
+- **`.describe()` 한국어 설명**: `'이번 턴에 사용자에게 입력 폼으로 받을 필드의 dot-path 목록 (1~6개). 비워두면 자유 텍스트 대화.'` — Gemini가 한국어 description을 그대로 instruction으로 인식.
+- **`max(6)` 제한**: 폼이 너무 길어지면 모바일 UX 저하 + LLM 환각 가능성 ↑. 6개로 cap.
+- **`assistantMessage` 30자 안내 + 폼 자동 표시**: 안내 텍스트와 입력 위젯의 책임 분리. 텍스트에서 필드 반복 금지가 핵심.
+- **derive-slots 분기 한 줄 추가**: `const ask = ctx.askFields?.length ? ctx.askFields : ctx.missingFields.length <= 3 ? ctx.missingFields : [];` — fallback 체인이 한 식에 표현되어 가독성 ↑.
+- **AssistantTurnContext 확장**: ChatRoot가 ApiSuccess.askFields를 ctx로 그대로 전달. 클라이언트 store/persist는 무변경(메시지 한 번 그릴 때만 사용).
+
+### CLAUDE.md Updates (이번 사이클)
+| Action | Target | 근거 |
+|--------|--------|------|
+| **NONE** | (변경 없음) | 본 작업의 패턴 3건 모두 land-permit-ai 채팅 엔진 한정 구현 디테일. claude-md skill Include/Exclude 기준에 따라 Exclude: (a) "코드만 보고 추측 가능"(스키마 `.describe()` + 시스템 프롬프트 자체가 self-documenting), (b) "프로젝트 전반 반복 안 함"(Gemini 챗봇 1개 feature 한정), (c) "이 줄 없으면 Claude 실수?" 테스트 실패. 기존 umbrella 규칙(`Server-side 외부 API 키 보호`, `Zod v4 JSON Schema`, `Feature 모듈 분리`, `server-only 모듈 격리`)이 이미 보안/구조 측면을 cover. 신규 일반 규칙 추가 시 noise만 ↑. |
+
+리뷰 완료 — Include 후보로 검토한 항목들과 기각 사유:
+- "Zod `.describe()` → JSON Schema → LLM": Zod v4 JSON Schema 규칙의 함의이며, 현재 land-permit-ai 1곳에서만 활용 → learn.md에만 기록.
+- "3-tier graceful fallback": 일반 원칙이지만 너무 추상적이고 본 프로젝트의 다른 영역(라우팅, share, answer-mapper)에 동일 패턴 반복 가능성 낮음 → learn.md에만 기록.
+- "Per-turn LLM-driven UI 신호 우선": Gemini 챗봇 한정. 다른 feature가 LLM 챗봇을 추가할 때 다시 평가.
+
+### arch 사후 리뷰 결과
+- 본 spec은 `.beskit/specs/` 트랙 외 직접 진행. 사후 리뷰 미수행. 후속 평가는 다음 spec 사이클에서 통합.
+
+### Follow-ups (후보 spec)
+- **Generic vs Per-case 스키마 통합**: `zAssistantResponse`를 base로 하고 `buildResponseSchemaForCase`가 `.extend()`로 좁히는 구조로 리팩터링 → 신규 필드 추가 시 한 곳만 수정.
+- **`askFields` 검증 강화**: 서버에서 dot-path 화이트리스트(`required-paths.ts` 기반) 대조하여 LLM이 존재하지 않는 필드를 보낸 경우 재시도/필터.
+- **FormCard 다중 슬롯 UX**: 6개 한계까지 채워졌을 때 스크롤/접힘 처리 검토.
+- **`assistantMessage` 30자 가드**: 응답 후처리에서 길이 초과 시 truncate 또는 재요청.
+- **askFields evaluation harness**: 고정 시나리오 N개로 LLM이 적절한 askFields를 보내는지 회귀 테스트.
