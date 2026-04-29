@@ -391,3 +391,82 @@ land-permit-ai 챗봇의 두 결함을 한 사이클에 해결. (1) **멀티턴 
 - **select 위젯 실제 활용**: 분기는 추가했으나 현재 등록된 select 필드 0. 향후 옵션 ≥5 enum 등장 시 radio→select 자동 전환 임계값 검토.
 - **split-id 일반화**: 사업자번호(3-2-5), 여권번호 등 다른 분할 PII 추가 시 `splitConfig: { partLengths, separator }`로 추상화.
 - **`askFields` 화이트리스트 검증(005 follow-up 재확인)**: 006에서 `application.rightType` 신규 필드를 askFields에 LLM이 보낼 때 dot-path 검증 부재. server-side guard 우선순위 ↑.
+
+---
+
+## 2026-04-29 — 007 land-permit-ai FormCard UX (always-enabled submit + chat-fallback 제거 + 옵션 D stale slot hide)
+
+### Summary
+land-permit-ai의 FormCard UX 3가지를 한 사이클에 개선. (1) **검증/제출 분리**: required 미충족 시 submit을 `disabled`로 막던 패턴을 항상 enable로 전환, 클릭 시 inline 한국어 에러 메시지 표시 + 첫 에러 필드 focus → scrollIntoView. (2) **"대화로 답하기" 버튼 + onChatFallback prop + ChatRoot.handleAnswerField 함수 일괄 제거**: 자유 텍스트 입력은 Composer가 이미 chokepoint이므로 폼 내부 fallback은 dead path. (3) **옵션 D: 단순 hide stale form slot**: ChatTimeline에서 `slot.kind === 'form'`은 마지막 assistant 메시지에서만 렌더, 이전 assistant 메시지의 form slot은 자동 hide(read-only 변환 옵션 A/B/C 비교 후 채택). 3 files / +245/-188. 백엔드 schema/route/system-prompt/answer-mapper/auto-lookup 모두 변경 0. arch 사후 리뷰 APPROVE_WITH_NIT(focus 순서 nit 즉시 수정 완료), `npx tsc --noEmit` exit 0, `npx next build` 15/15.
+
+### What Went Well
+- **iOS 가상키보드 가림 방지: focus(preventScroll) → scrollIntoView 순서**: 단순 `focus()`만 호출하면 iOS Safari가 `scroll-into-view + 키보드 popup`을 동시에 처리하면서 키보드가 입력 필드를 가리는 현상 발생. `focus({ preventScroll: true })` 먼저 호출하여 키보드만 띄운 뒤, 별도로 `scrollIntoView({ block: 'center' })` 실행하면 키보드를 고려한 위치로 정확히 스크롤. mobile-first 프로젝트 전반 반복 적용 가능 패턴으로 CLAUDE.md "Mobile First" 보강.
+- **검증/제출 멘탈 모델 단순화**: `disabled until valid` 모델은 사용자가 "왜 버튼이 비활성인지" 추측 강제 + 시각 단서 부족. `always enabled + 클릭 시 검증`은 (a) 사용자 의도(=제출 시도)를 명확히 받음, (b) 검증 결과를 inline 에러로 즉시 시각화, (c) 첫 에러 필드 자동 focus로 정정 경로 안내. opacity/disabled CSS 분기도 모두 제거되어 코드도 단순화.
+- **dead path 일괄 제거**: "대화로 답하기" 버튼은 005/006 사이클에서 askFields/위젯 다양성이 강화되며 활용도 0으로 수렴. ChatRoot.handleAnswerField + ChatTimeline.onAnswerField prop + FormCard.onChatFallback prop을 한 번에 제거. eng가 보존 vs 제거를 저울질한 끝에 **git history로 복구 가능 → 보존 비용(인지 부하/무관 분기)이 더 큼** 판단으로 제거 선택. arch 권고와 일치.
+- **옵션 D 채택 근거**: 4안 비교 — A(read-only display 변환), B(이전 폼 자동 잠금 + 회색 처리), C(메시지 자체 hide), D(form slot만 단순 hide, 메시지 텍스트는 유지). D가 (a) 시각적 잔재 0, (b) PII 마스킹 단일 진실 원천 보존(form value는 history에 들어가지 않음 — 이미 Composer chokepoint), (c) 메시지 텍스트는 그대로 표시되어 대화 맥락 유지, (d) lastAssistantIdx 매 렌더 재계산이라 hydrate/persist 호환 등 4박자 충족.
+- **lastAssistantIdx 역순 탐색 1줄로 stale UI 자동 정리**: `for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === 'assistant') { lastAssistantIdx = i; break; }`. slot.kind === 'form' && idx !== lastAssistantIdx 시 skip 1줄 가드. 신규 assistant 턴이 추가되면 이전 폼은 자동 사라짐 — store/reducer/persist 변경 0.
+- **try/catch로 focus 안전 호출**: consent label 등 `HTMLElement.focus()` 호출이 안전하지 않은 element도 firstErrorRefs에 부착될 수 있음. focus 호출을 try/catch로 감싸 한 element 실패가 전체 검증/제출 흐름을 막지 않도록 보호.
+- **PII/legacy 분기 무손상**: 'id' legacy 분기 + `formatRrnInput` 보존, 006의 split-id 정규식 게이트 유지, Composer 단일 chokepoint 마스킹 유지. 검증 로직 추가에도 PII 정합성 무영향.
+
+### Problems & Solutions
+- **단순 focus()의 iOS 키보드 가림**: 첫 시도에서 `el.focus()` 단발 호출 시 iOS Safari에서 입력 필드가 키보드 뒤로 숨음. → `preventScroll: true`로 키보드만 먼저 띄우고, 별도 `scrollIntoView({ block: 'center' })`로 키보드 영역 위로 스크롤. arch 사후 리뷰의 nit이었고 즉시 수정.
+- **검증 헬퍼 분기 폭증 우려**: type별(text/id/split-id/select/radio/boolean/consent) 검증 규칙이 다름. → `validateField(field, value)` 단일 헬퍼로 추출, type별 분기 + 한국어 에러 메시지(필수 미입력, 형식 불일치)를 한 곳에 모음. handleSubmit은 헬퍼만 호출.
+- **에러 텍스트/border 우선순위 충돌**: active(focus) border vs error border vs default border 동시 적용 가능. → 우선순위 명시 `active > error > default`로 결정. error 시 input border-color = `var(--warn)` + 에러 텍스트 빨간색.
+- **firstErrorRefs 부착 누락 위험**: consent/boolean/radio/split-id/select/text 모든 분기에 ref 부착 필요. 한 분기 누락 시 해당 type만 첫 에러 focus 동작 안 함. → 모든 분기에 일관 부착 후 `npx tsc --noEmit` + 시각 검증.
+- **handleAnswerField 보존 vs 제거**: dead code 보존(미래 활용 가능성) vs 제거(인지 부하 ↓). → git history 복구 가능 + 005/006 사이클에서 활용도 0 수렴 + arch 권고 → 제거. 일회성 결정으로 CLAUDE.md 규칙 격상은 X.
+
+### Key Patterns (코드 보면 알 수 있는 디테일 — CLAUDE.md에는 미포함)
+- **focus → scrollIntoView 2단계**: `el.focus({ preventScroll: true })` 후 `el.scrollIntoView({ behavior: 'smooth', block: 'center' })`. 단순 `focus()` 또는 `scrollIntoView()` 단발은 iOS에서 키보드 가림 발생.
+- **validateField(field, value) 헬퍼**: type별 분기 + 한국어 메시지("필수 항목입니다", "주민등록번호 형식이 올바르지 않습니다" 등). FormCard 내부 헬퍼이며 외부 export X.
+- **errors state shape**: `Record<path, string>` (path → 에러 메시지). 빈 string이면 에러 없음.
+- **firstErrorRefs**: `Record<path, RefObject<HTMLElement | null>>`. handleSubmit이 검증 후 첫 에러 path의 ref를 focus.
+- **lastAssistantIdx 매 렌더 재계산**: useMemo 미사용 의도. `messages` 길이 변화마다 재계산되어 hydrate/persist 후에도 정확. O(n) 역순 탐색이지만 메시지 수 작아 무시.
+- **slot 가드 1줄**: `if (slot.kind === 'form' && idx !== lastAssistantIdx) return null;` ChatTimeline 메시지 렌더 루프 내부.
+- **try/catch focus**: `try { ref.current?.focus({ preventScroll: true }); } catch { /* consent label 등 focus-incapable */ }`.
+- **opacity/disabled 제거**: submit 버튼은 무조건 enable. 검증은 클릭 후. 시각적 cue는 inline 에러 메시지로만.
+
+### CLAUDE.md Updates (이번 사이클)
+| Action | Target | 근거 |
+|--------|--------|------|
+| **MODIFY** | `Mobile First` 라인 — iOS 가상키보드 가림 방지를 위한 `focus({ preventScroll: true })` → `scrollIntoView({ block: 'center' })` 순서 명시 | mobile-first 프로젝트 전반 반복 적용 가능. 단순 `focus()` 호출 시 iOS 키보드 가림 현상은 코드만 보고 추측 불가(브라우저 동작 의도). "이 줄 없으면 Claude가 단발 focus() 사용으로 회귀할 가능성" 테스트 통과. 1줄 명료. land-permit-ai/main(main) 양쪽 form 시나리오에 동일 적용 가능. |
+
+총 1건(MODIFY 1). ADD/DELETE 0. 기각 사유:
+- **검증/제출 분리(항상 enable + 클릭 시 검증)**: UX 패턴이지만 land-permit-ai FormCard 1곳 한정. 본 프로젝트의 다른 form(절차형 land-permit page) 추가 form 가능성 미지수. → learn.md only.
+- **옵션 D(마지막 assistant 메시지 한정 slot 가드)**: 챗봇 슬롯 stale UI 정리 패턴. land-permit-ai chat 1곳 한정. 다른 챗봇 feature 추가 시 재평가. → learn.md only.
+- **dead code 제거 결정(handleAnswerField 등)**: 일회성 사이클 결정. 일반 원칙은 너무 추상적("dead code 제거하라")으로 격상 시 noise. → learn.md only.
+- **try/catch focus 방어**: 너무 디테일. focus-incapable element만 ref 부착 안 하는 게 정도이지만 본 프로젝트에 반복 가능성 낮음. → learn.md only.
+
+### arch 사후 리뷰 결과
+- APPROVE_WITH_NIT.
+- Mobile focus 순서 nit 1건 — `focus()` 단발 → `focus({ preventScroll: true }) + scrollIntoView({ block: 'center' })`로 즉시 수정 완료.
+- Critical 0, High 0, Medium/Low 없음. 빌드 15/15 통과. 머지 차단 사유 없음.
+- 본 spec도 005/006과 동일하게 `.beskit/specs/` 트랙 외 직접 진행. 정식 사후 리뷰는 다음 spec 사이클에서 통합.
+
+### 005/006과의 관계 (제거/변형/유지 메모)
+**유지(007에서도 살아있음)**:
+- 005의 `askFields` 신호 + 3-tier graceful fallback — 무변경.
+- 006의 bimodal lane system-prompt, RADIO_OPTIONS map, split-id 정규식 게이트(`/^\d{6}-\d{7}$/`), 'id' legacy 분기 + `formatRrnInput` — 모두 무변경.
+- 002~004 코어(Gemini API, auto-lookup, route group, 디자인 토큰 격리, share/answer-mapper, Composer chokepoint 마스킹) — 무변경.
+
+**확장/변경(007에서)**:
+- FormCard: `validateField` 헬퍼 + `errors` state + `firstErrorRefs` + handleSubmit 항상 enable 분기 추가.
+- FormCard: "대화로 답하기" 버튼 + `onChatFallback` prop **제거**.
+- ChatTimeline: `lastAssistantIdx` 역순 탐색 + form slot stale hide 가드 1줄 추가. `onAnswerField` prop **제거**.
+- ChatRoot: `handleAnswerField` 함수 + `<ChatTimeline onAnswerField=…/>` 인자 **제거**. `FIELD_LABEL` import는 `handleSubmitFormFields`가 사용하므로 보존.
+
+**변경 없음**:
+- backend(`/api/gemini/chat`, schema, system-prompt, `mergeExtractedFields`, `applyAutoLandLookup`, `required-paths`).
+- 메시지 type/store/reducer/persist 스키마(slot.kind === 'form' 가드는 렌더 시점만 동작, 메시지 데이터 변경 0).
+- answer-mapper, HTML/PDF/ZIP 빌더, share/encode/decode.
+- 디자인 토큰(`.lp-ai-root` scope), route group 구조.
+- PII 마스킹 정규식 + Composer chokepoint.
+
+001~006 entry는 historical record로 보존(수정 X).
+
+### Follow-ups (후보 spec)
+- **검증 메시지 i18n 분리**: 한국어 hardcoded → `LP_AI_VALIDATION_MESSAGES` map 추출. 향후 영어 지원/문구 재사용.
+- **inline 에러 ARIA 속성**: `aria-invalid` + `aria-describedby={errorId}` 추가하여 스크린리더 지원.
+- **form slot hide UX 시각화**: 이전 폼이 사라지는 것이 한 시점에 너무 갑작스러우면 fade-out 애니메이션 검토(현재 즉시 hide). 모바일 사용자 인지 부담 측정 후 결정.
+- **legacy `'id'` 분기 + `formatRrnInput` 제거 재검토(006 follow-up 연속)**: 본 사이클에서도 외부 호출자 grep 보존 결정 유지. 다음 사이클에서 0건 확인 시 정리.
+- **focus 순서 헬퍼 추출**: `focusWithoutKeyboardOcclusion(el)` 유틸로 추출하여 다른 form/page에서도 재사용. CLAUDE.md 규칙 → 코드 헬퍼 격상 후보.
+- **always-enabled submit + 검증 패턴의 다른 폼 적용**: 절차형 `/land-permit` 페이지 form에 동일 패턴 도입 검토. 적용되면 CLAUDE.md 규칙 격상 후보.

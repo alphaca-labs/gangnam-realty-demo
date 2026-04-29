@@ -22,7 +22,6 @@ interface ChatTimelineProps {
   answers: Answers;
   isTyping?: boolean;
   onSelectCase?: (caseType: CaseType) => void;
-  onAnswerField?: (path: string) => void;
   onSubmitFormFields?: (values: Record<string, string>) => void;
   onOpenReview?: () => void;
   trailingSlot?: ReactNode;
@@ -58,13 +57,19 @@ export function ChatTimeline({
   answers,
   isTyping,
   onSelectCase,
-  onAnswerField,
   onSubmitFormFields,
   onOpenReview,
   trailingSlot,
 }: ChatTimelineProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const hasMessages = messages.length > 0;
+
+  const lastAssistantIdx = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return i;
+    }
+    return -1;
+  })();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -96,11 +101,6 @@ export function ChatTimeline({
             fields={slot.fields}
             submitLabel={slot.submitLabel}
             onSubmit={onSubmitFormFields}
-            onChatFallback={
-              onAnswerField
-                ? () => onAnswerField(slot.fields[0]?.path ?? '')
-                : undefined
-            }
           />
         );
       case 'summary':
@@ -173,7 +173,7 @@ export function ChatTimeline({
           </>
         ) : null}
 
-        {messages.map((m) => {
+        {messages.map((m, idx) => {
           if (m.role === 'user') {
             return (
               <UserBubble key={m.id} time={formatTime(m.timestamp)}>
@@ -182,6 +182,7 @@ export function ChatTimeline({
             );
           }
           const slots = m.slots && m.slots.length > 0 ? m.slots : ([{ kind: 'text' }] as RichSlot[]);
+          const isLastAssistant = idx === lastAssistantIdx;
           return (
             <div key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <AIBubble time={formatTime(m.timestamp)}>
@@ -189,6 +190,7 @@ export function ChatTimeline({
               </AIBubble>
               {slots
                 .filter((s) => s.kind !== 'text')
+                .filter((s) => !(s.kind === 'form' && !isLastAssistant))
                 .map((s, i) => (
                   <AIBubble key={`${m.id}-slot-${i}`} time="">
                     {renderSlot(s, `${m.id}-${i}`)}

@@ -292,14 +292,6 @@ function ChatRootInner() {
     lastStepEmittedRef.current = -1;
   };
 
-  function handleAnswerField(path: string) {
-    setInput((prev) => {
-      if (prev.length > 0) return prev;
-      const label = FIELD_LABEL[path] ?? path;
-      return `${label} 항목을 알려드릴게요. `;
-    });
-  }
-
   function formatFormValue(path: string, raw: string): string {
     if (path.startsWith('privacy.consent')) {
       return raw === 'true' ? '동의함' : '동의하지 않음';
@@ -372,7 +364,6 @@ function ChatRootInner() {
               answers={state.answers}
               isTyping={isTyping}
               onSelectCase={selectCase}
-              onAnswerField={handleAnswerField}
               onSubmitFormFields={handleSubmitFormFields}
               onOpenReview={() => dispatch({ type: 'OPEN_REVIEW' })}
               trailingSlot={

@@ -9,7 +9,7 @@ ChatGPT 웹 UI 스타일의 AI 부동산 상담 데모 사이트.
 - **No API calls (default)** — 데모 데이터는 하드코딩/목데이터. 예외: `src/features/land-permit-ai/`는 server-side에서 Gemini/Kakao/VWorld API 호출(`/api/gemini/chat` 라우트, `GEMINI/KAKAO_REST/VWORLD_API_KEY` env). 키 미설정 시 Mock fallback.
 - **Server-side 외부 API 키 보호** — `process.env.{GEMINI,VWORLD,KAKAO_REST}_API_KEY` 등 외부 서비스 키는 `src/app/api/**`와 `src/features/*/llm/**`에서만 참조. 클라이언트 코드/`NEXT_PUBLIC_*` 노출 금지. 가급적 키별 단일 소유 모듈 1곳에서만 read.
 - **server-only 모듈 격리** — 외부 API 호출/시크릿 read를 수행하는 모듈(`src/features/*/llm/lookup/**`, `llm/auto-*.ts` 등)은 파일 첫 줄 `import 'server-only'` 강제. 클라이언트 번들 leak을 빌드 단계에서 차단.
-- **Mobile First** — 반응형 필수
+- **Mobile First** — 반응형 필수. 폼 검증 실패 후 첫 에러 필드로 이동 시 `el.focus({ preventScroll: true })` → `el.scrollIntoView({ block: 'center' })` 순서로 호출(iOS 가상키보드가 먼저 떠서 시야를 가리는 현상 방지).
 - **ChatGPT 스타일 (메인 라우트)** — `src/app/(main)/**`는 사이드바 + 채팅 UI + 리치 응답. `src/app/(lp-ai)/land-permit-ai/**`는 자체 디자인 토큰/레이아웃 사용(별도 chrome).
 - **Route Group 다중 chrome 격리** — 같은 repo에서 다른 layout/디자인이 필요하면 `src/app/(group-name)/...` route group + 그룹별 자체 `layout.tsx` 사용. URL 변화 없음. 라우트 추가 시 다른 그룹 회귀 0건 자동 보장.
 - **디자인 토큰 root scope 격리** — 외부 디자인 시스템 토큰은 `:root`가 아닌 컴포넌트 root 클래스(`.{feature}-root`)에 scope. globals.css/Tailwind 침범 금지. `@keyframes`도 feature prefix로 충돌 회피.
