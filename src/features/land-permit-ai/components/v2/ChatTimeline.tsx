@@ -37,19 +37,22 @@ function formatTime(ts: number): string {
   return `${period} ${hh}:${String(m).padStart(2, '0')}`;
 }
 
-const CASE_CHOICES = caseDefinitions.map((c) => ({
-  id: c.type,
-  label: c.label,
-  desc: c.description,
-  iconKey:
-    c.type === 'self-occupy'
-      ? 'pin'
-      : c.type === 'non-residential'
-        ? 'card'
-        : c.type === 'tax-deferral'
-          ? 'doc'
-          : 'user',
-}));
+const CASE_CHOICES = caseDefinitions
+  // demo: 양도세 유예 케이스는 추후 업데이트 (서술형 textarea 통합 후)
+  .filter((c) => c.type !== 'tax-deferral')
+  .map((c) => ({
+    id: c.type,
+    label: c.label,
+    desc: c.description,
+    iconKey:
+      c.type === 'self-occupy'
+        ? 'pin'
+        : c.type === 'non-residential'
+          ? 'card'
+          : c.type === 'tax-deferral'
+            ? 'doc'
+            : 'user',
+  }));
 
 export function ChatTimeline({
   messages,

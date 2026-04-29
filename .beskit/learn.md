@@ -557,3 +557,97 @@ land-permit-ai에 3개 변경 동시 적용. (1) **QR/share hash 직행**: `HYDR
 - **localStorage quota 대응**: envelope이 평문보다 ~33% 큼(base64). 대용량 세션 시 quota exceeded 가능. graceful degradation 검토.
 - **enc-key 도난 시나리오 mitigation**: 현재 디바이스 자동 키는 XSS 공격 시 키 + envelope 동시 탈취 가능. WebAuthn/passkey로 키 보호 격상 검토(난이도 높음, 우선순위 낮음).
 - **`crypto-store.ts` 다른 feature로 격상**: 현재 land-permit-ai 한정. 다른 feature가 PII 저장 추가 시 `src/lib/crypto-store.ts`로 이동 + feature-agnostic API 검토.
+
+---
+
+## 2026-04-29 — 009 land-permit-ai 실시간 서식 미리보기 패널 + 양도세 케이스 데모용 hide
+
+### Summary
+데모 임팩트 우선 UX 개선 2건 동시 적용. (1) **LivePreviewPane (실시간 서식 미리보기)**: 데스크톱 ≥1024px에서 우측 40% 패널에 `buildDocuments(caseType, answers)` 결과를 iframe `srcDoc`로 렌더. `useDeferredValue(answers)` + `useMemo(buildDocuments)` + `lastHtmlRef` dirty check로 idle 갱신, 동일 HTML 재렌더 회피. `maskRrnInString`을 final HTML 문자열에 적용(007/008 input/at-rest 마스킹의 output layer 보강 — defense in depth). iframe `sandbox=""` (외부 fetch 0, XSS 면적 최소). 다중 문서 시 탭 strip으로 전환. A4 scale 0.55, transform-origin top left. `matchMedia('(min-width: 1024px)')` + Safari `addListener` fallback, 초기값 false로 SSR mismatch 회피, 모바일에서는 wrapper 자체 unmount(DOM 비용 0). (2) **양도세(`tax-deferral`) 케이스 데모용 hide**: `ChatTimeline`의 `CASE_CHOICES` 빌드 시점에 `caseDefinitions.filter((c) => c.type !== 'tax-deferral')` 1줄 + 의도 주석. caseDefinitions/엔진/스키마/answer-mapper 0건 수정. 공유 hash로 진입 시 caseType은 여전히 valid(데모 미팅 새 case 선택 시만 미노출). 3 files / 1 신규(177 lines) + 2 수정(+45/-2, +3). `npx tsc --noEmit` exit 0, `npx next build` 15/15. arch 사후 리뷰 **APPROVE**(nit 0).
+
+### What Went Well
+- **3-layer PII 방어 완성(input → at-rest → output)**: 006 split-id 위젯 chokepoint(input) + 007 Composer 단일 마스킹 + 008 envelope 암호화(at-rest) + 009 LivePreviewPane HTML 마스킹(output rendering). 각 layer는 sibling 관계로 독립 동작하지만, 어느 한 layer가 실수해도 나머지가 평문 leak 차단. 본 사이클은 output rendering layer를 추가한 사례.
+- **iframe `sandbox=""` 완전 격리**: `srcDoc`만 사용하고 외부 fetch 0이 전제이므로 가장 엄격한 sandbox 가능. land-permit-html 빌더가 인라인 `<style>`만 사용 + Pretendard 시스템 폰트 fallback 안전한 덕에 빈 sandbox로도 시각 정합성 유지. XSS 공격 면적을 구조적으로 0으로 만듦.
+- **`useDeferredValue` + `lastHtmlRef` dirty check 조합**: 명시적 `setTimeout`/`debounce`/외부 라이브러리 없이 React 18 idle scheduling만으로 입력 중 미리보기 갱신 부드럽게. 동일 HTML 재할당 시 `setSrcDoc` skip하여 iframe 강제 reload 방지(메모리/스크롤 위치 보존).
+- **Route group 격리 룰의 효과 입증**: `(lp-ai)` route group 한정 변경 → `(main)` 회귀 0건 자동 보장. CLAUDE.md "Route Group 다중 chrome 격리" 룰의 실전 효과를 다시 한 번 입증한 사이클.
+- **데이터 vs UI 레이어 분리(case hide)**: `caseDefinitions`(데이터) 수정 vs `CASE_CHOICES` UI 빌드(렌더) 수정 — 후자 채택. 엔진/스키마/공유 hash가 모두 `tax-deferral`을 valid로 인식 유지 → 미래 미팅에서 unhide 시 1줄 revert. 데모 미팅 임팩트 vs 데이터 손상 trade-off에서 손상 0 선택.
+- **모바일 wrapper unmount → DOM 비용 0**: `isWidePreview && state.caseType && !isReviewing` 조건으로 모바일에서는 LivePreviewPane 자체가 React tree에 존재 X. iframe + buildDocuments + masking 모두 실행 안 함. 모바일 성능 무영향.
+- **Safari `addListener` fallback**: 최신 표준 `addEventListener('change', cb)` + 구버전 Safari `addListener(cb)` 양쪽 등록 + cleanup도 양쪽. matchMedia 미디어쿼리 변화 감지에서 폐기된 API를 의식적으로 보강한 사례.
+- **초기값 false로 SSR mismatch 회피**: `useState(false)` → `useEffect`에서 `matchMedia` 평가 후 setState. 첫 클라이언트 렌더는 항상 모바일 가정 → SSR HTML과 일치. mount 후 데스크톱이면 패널 추가 렌더(시각 점프는 무시 가능 수준).
+- **arch 사후 리뷰 APPROVE (nit 0)**: 005~008은 모두 nit 1건씩 있었으나 본 사이클은 zero. defense-in-depth 마스킹, sandbox 격리, route group 무영향, 빌드 통과 모두 자체 검증 완료한 결과.
+
+### Problems & Solutions
+- **iframe 매번 강제 reload 시 스크롤 점프**: `srcDoc`을 매 렌더 새 문자열로 set하면 iframe 내부 스크롤 위치가 reset됨. → `lastHtmlRef.current`와 비교 후 변경 시에만 `setSrcDoc`. 동일 HTML이면 skip → 스크롤/메모리 보존.
+- **모바일에서 미리보기 패널이 차지하는 화면 비율 부담**: 좁은 모바일에 우측 패널을 욱여넣으면 메인 채팅이 답답해짐. → `matchMedia('(min-width: 1024px)')` 가드로 데스크톱 한정 mount. wrapper 자체 unmount.
+- **SSR/CSR mismatch 우려**: matchMedia는 서버에서 평가 불가. → 초기값 `false` 고정 + mount 후 평가. 첫 paint는 모바일 레이아웃, 데스크톱이면 hydration 후 패널 fade-in 형태(시각 점프 미미).
+- **`sandbox=""`가 너무 엄격해서 폰트 깨짐 우려**: Pretendard CDN fetch 차단됨. → 시스템 폰트 fallback이 visual diff 미미하다 판단(arch APPROVE). 미래 폰트 정합성 critical 시 sandbox에 `allow-same-origin` 추가 검토(보안 trade-off 명시).
+- **caseType `tax-deferral` 공유 hash 진입 시 회귀 우려**: 데이터 layer에서 삭제 시 `decode(hash)` 결과의 `caseType==='tax-deferral'`이 invalid가 됨. → UI layer filter로 한정. engine/share/answer-mapper 모두 무변경 → hash 진입자 무영향.
+
+### Key Patterns (코드 보면 알 수 있는 디테일 — CLAUDE.md에는 미포함)
+- **`useDeferredValue(answers)` + `useMemo(buildDocuments)`**: answers 변화 시 idle 시점에만 재계산. 입력 중 input lag 0.
+- **`lastHtmlRef` dirty check**: `if (masked !== lastHtmlRef.current) { lastHtmlRef.current = masked; setSrcDoc(masked); }`. iframe 강제 reload 회피.
+- **iframe `sandbox=""` + `srcDoc`**: 빈 문자열 sandbox = 모든 권한 차단(스크립트/폼/팝업/외부 fetch 모두 X). srcDoc은 inline HTML이므로 외부 origin 0.
+- **A4 scale 0.55**: 210mm @ 96dpi ≈ 794px. 40% 패널 = ~480px. scale 0.55로 ~437px → 패널에 깔끔히 fit.
+- **scale 후 `marginBottom`/`marginRight` negative**: `transform: scale()`이 layout box를 줄이지 않으므로 scrollbar overflow 발생. negative margin으로 시각적 footprint를 scaled 크기에 맞춤.
+- **matchMedia + Safari fallback**: `mql.addEventListener?.('change', cb) ?? mql.addListener(cb)` 패턴. cleanup에서도 양쪽 시도.
+- **mount 조건 3-tuple**: `isWidePreview && state.caseType && !isReviewing`. caseType null이면 의미 없음, reviewing이면 ResultReport가 풀스크린 차지.
+- **flex layout**: main `1 1 60%` minWidth:0, preview wrap `0 0 40%` minWidth:0. minWidth:0이 없으면 자식 grow가 부모 width를 초과.
+- **CASE_CHOICES filter 1줄**: `caseDefinitions.filter((c) => c.type !== 'tax-deferral')` + 의도 주석 1줄. 데이터/엔진/스키마 무변경.
+- **iconKey에 `tax-deferral` 분기 보존**: filter로 가려도 분기 자체는 코드상 유지 → unhide 시 1줄 revert로 충분.
+
+### CLAUDE.md Updates (이번 사이클)
+| Action | Target | 근거 |
+|--------|--------|------|
+| **NONE** | (검토 결과 추가/수정/삭제 없음) | 모든 후보가 (a) 단일 사용처, (b) 표준 React/브라우저 패턴, (c) 기존 룰로 커버, (d) 일회성 데모 결정 중 하나 이상에 해당. |
+
+총 0건. 검토한 후보와 기각 사유:
+- **iframe `srcDoc` + `sandbox=""` 미리보기 패턴**: 일반 보안 패턴이지만 **현재 사용처 LivePreviewPane 1곳 한정**. 두 번째 consumer(예: 다른 feature의 HTML 미리보기) 추가 시 격상 재평가. 단일 site에서 격상 시 over-abstract. → learn.md only.
+- **`maskRrnInString`을 HTML output layer에도 적용(3-layer 방어)**: 진정한 신규 dimension(input/at-rest/output rendering)이지만 **output rendering 사용처가 LivePreviewPane 1곳 뿐**. 기존 `PII 위젯 마스킹 정합성`(input)과 `PII at-rest 암호화`(persist) 룰이 이미 존재 → 두 번째 output 사용처(예: 인쇄/공유 모달의 HTML 미리보기) 추가 시 "PII output rendering 마스킹" 룰로 격상 재평가. 단일 site 격상은 premature abstraction. → learn.md only(★ Follow-up 후보로 명시).
+- **`useDeferredValue` debounce 대체**: 표준 React 18 패턴. Claude가 코드 보고 즉시 파악. → 격상 X.
+- **`matchMedia` + Safari `addListener` fallback**: 표준 브라우저 호환 패턴. Claude가 reference 보고 처리 가능. → 격상 X.
+- **caseDefinitions UI layer filter(데이터 vs UI 분리)**: 일회성 데모 미팅용 결정. 일반 원칙으로 격상하면 abstract noise. 미래 다른 케이스 hide 필요 시 본 entry 참조. → learn.md only.
+- **route group 한정 변경 → `(main)` 회귀 0**: 이미 CLAUDE.md "Route Group 다중 chrome 격리" 룰로 커버. 본 사이클은 그 효과를 입증한 사례일 뿐. → 보강 X.
+- **모바일 wrapper unmount(DOM 비용 0)**: 자명한 React 패턴. → 격상 X.
+- **iframe scroll preserve(`lastHtmlRef` dirty check)**: 영리한 디테일이지만 LivePreviewPane 1곳 한정. → 격상 X.
+
+### arch 사후 리뷰 결과
+- **APPROVE (nit 0)**.
+- Critical 0, High 0, Medium/Low 0. `npx tsc --noEmit` exit 0, `npx next build` 15/15. 머지 차단 사유 없음.
+- 005~008은 모두 nit 1건 → 009는 zero nit. defense-in-depth 마스킹 + sandbox 격리 + route group 무영향이 사전 설계로 검증된 결과.
+- 본 spec도 005/006/007/008과 동일하게 `.beskit/specs/` 트랙 외 직접 진행. 정식 사후 리뷰는 다음 spec 사이클에서 통합.
+
+### 005~008과의 관계 (제거/변형/유지 메모)
+**유지(009에서도 살아있음)**:
+- 005의 `askFields` 신호 + 3-tier graceful fallback — 무변경.
+- 006의 bimodal lane system-prompt, RADIO_OPTIONS map, split-id 정규식 게이트, 'id' legacy 분기 + `formatRrnInput` — 모두 무변경.
+- 007의 `validateField` + `errors` + `firstErrorRefs` + `lastAssistantIdx` 가드 + always-enabled submit + iOS focus 순서 — 모두 무변경.
+- 008의 envelope 암호화 + `clearSession` + `HYDRATE_FROM_URL.fromShare` 분기 + `mask → encrypt` 순서 — 모두 무변경.
+- 002~004 코어(Gemini API, auto-lookup, route group, 디자인 토큰 격리, share/answer-mapper, Composer chokepoint 마스킹) — 무변경.
+
+**확장/변경(009에서)**:
+- 신규 `components/v2/LivePreviewPane.tsx` (177 lines): iframe + buildDocuments + maskRrnInString + useDeferredValue + 탭 strip.
+- `ChatRoot.tsx`: matchMedia 데스크톱 가드 + flex layout(main 60% + preview 40%) + LivePreviewPane mount 분기.
+- `ChatTimeline.tsx`: CASE_CHOICES에 `tax-deferral` filter 1줄 + 의도 주석.
+
+**변경 없음**:
+- backend(`/api/gemini/chat`, schema, system-prompt, `mergeExtractedFields`, `applyAutoLandLookup`, `required-paths`).
+- engine(`buildDocuments`, `land-permit-html`, answer-mapper, required-paths).
+- 데이터(`@/data/land-permit` caseDefinitions/엔진).
+- share encode/decode, hash 흐름.
+- HTML/PDF/ZIP 빌더.
+- 디자인 토큰(`.lp-ai-root` scope) — `var(--paper-2/--ink-2/--line-2)` 기존 토큰 그대로 사용.
+- route group 구조.
+- PII 마스킹 정규식 + Composer chokepoint(007 무변경 그대로).
+- localStorage envelope 암호화(008 무변경 그대로).
+- 메시지 type/store 스키마.
+
+001~008 entry는 historical record로 보존(수정 X).
+
+### Follow-ups (후보 spec)
+- **★ PII output rendering 마스킹 룰 격상 후보**: LivePreviewPane 외 두 번째 HTML 미리보기/인쇄/공유 모달 consumer 추가 시 CLAUDE.md에 "PII output rendering 정합성"(client-side HTML 렌더 직전 `maskRrnInString` 통과) 룰 격상 재평가. 현재는 single-site → learn.md only.
+- **iframe `sandbox=""` 패턴 라이브러리화**: 두 번째 consumer 추가 시 `src/components/SafeHtmlPreview.tsx` 추출 검토. 현재는 LivePreviewPane 내부 inline.
+- **A4 scale dynamic**: 현재 0.55 hardcoded. 패널 너비에 비례 계산(`useResizeObserver`)으로 작은/큰 화면 모두 fit.
+- **다중 문서 동시 표시**: 현재 탭 strip 1개 활성. 데스크톱 ≥1440px에서 좌우 split 검토.
+- **양도세 케이스 unhide 트리거**: 서술형 textarea 통합 후 `tax-deferral` 미공개 사유 해소 시 1줄 revert. spec/엔진은 이미 ready.
+- **iframe 폰트 정합성**: 현재 `sandbox=""`로 Pretendard CDN 차단됨(시스템 fallback). 폰트 정합성 critical 시 `sandbox="allow-same-origin"` + 보안 trade-off 명시 검토.
+- **미리보기 print/export trigger**: iframe 내부 print 또는 다운로드 버튼 추가 검토(현재 미리보기는 read-only).

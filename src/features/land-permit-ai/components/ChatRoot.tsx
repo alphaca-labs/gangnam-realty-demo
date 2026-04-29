@@ -21,6 +21,7 @@ import { createId } from '../utils/id';
 import { ChatHeader } from './v2/ChatHeader';
 import { ChatTimeline } from './v2/ChatTimeline';
 import { Composer } from './v2/Composer';
+import { LivePreviewPane } from './v2/LivePreviewPane';
 import { LpSidebar, type LpSession } from './v2/LpSidebar';
 import { NoticeBanner } from './v2/NoticeBanner';
 import { ResultReport } from './v2/ResultReport';
@@ -92,6 +93,22 @@ function ChatRootInner() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sharedNotice, setSharedNotice] = useState(false);
   const [sessions] = useState<LpSession[]>([]);
+  // SSR-safe: false 초기값 → mount 후 matchMedia 결과 반영. 모바일 회귀 0.
+  const [isWidePreview, setIsWidePreview] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const update = () => setIsWidePreview(mql.matches);
+    update();
+    if (mql.addEventListener) {
+      mql.addEventListener('change', update);
+      return () => mql.removeEventListener('change', update);
+    }
+    // older safari fallback
+    mql.addListener(update);
+    return () => mql.removeListener(update);
+  }, []);
   const lastUserMessageRef = useRef<string>('');
   const prevProgressRef = useRef<number>(0);
   const lastStepEmittedRef = useRef<number>(-1);
@@ -363,9 +380,18 @@ function ChatRootInner() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
       />
-      <main
+      <div
         style={{
           flex: 1,
+          display: 'flex',
+          minWidth: 0,
+          height: '100%',
+        }}
+        className="lp-chat-with-preview"
+      >
+      <main
+        style={{
+          flex: isWidePreview && state.caseType && !isReviewing ? '1 1 60%' : 1,
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
@@ -448,6 +474,23 @@ function ChatRootInner() {
           </>
         )}
       </main>
+        {isWidePreview && state.caseType && !isReviewing ? (
+          <div
+            className="lp-preview-wrap"
+            style={{
+              flex: '0 0 40%',
+              minWidth: 0,
+              display: 'flex',
+              borderLeft: '1px solid var(--line-2)',
+              height: '100%',
+            }}
+          >
+            <div style={{ flex: 1, display: 'flex', minWidth: 0 }}>
+              <LivePreviewPane caseType={state.caseType} answers={state.answers} />
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       <QrShareDialog
         open={qrOpen}
