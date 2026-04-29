@@ -26,7 +26,7 @@ import { NoticeBanner } from './v2/NoticeBanner';
 import { ResultReport } from './v2/ResultReport';
 import { ErrorBanner } from './ErrorBanner';
 import { QrShareDialog } from './QrShareDialog';
-import { deriveSlots } from './v2/cards/derive-slots';
+import { deriveSlots, FIELD_LABEL } from './v2/cards/derive-slots';
 import type { AutoLookupMeta, RichSlot } from './v2/cards/types';
 
 export interface ChatRootProps {
@@ -293,8 +293,35 @@ function ChatRootInner() {
   function handleAnswerField(path: string) {
     setInput((prev) => {
       if (prev.length > 0) return prev;
-      return `${path} 항목을 알려드릴게요. `;
+      const label = FIELD_LABEL[path] ?? path;
+      return `${label} 항목을 알려드릴게요. `;
     });
+  }
+
+  function formatFormValue(path: string, raw: string): string {
+    if (path.startsWith('privacy.consent')) {
+      return raw === 'true' ? '동의함' : '동의하지 않음';
+    }
+    if (
+      path === 'landUseSelf.hasExistingHouse' ||
+      path === 'landUseTax.sellerIsMultiHouseOwner' ||
+      path === 'landUseTax.buyerIsNoHouse'
+    ) {
+      return raw === 'true' ? '예' : '아니오';
+    }
+    return raw.trim();
+  }
+
+  function handleSubmitFormFields(values: Record<string, string>) {
+    const lines = Object.entries(values)
+      .filter(([, v]) => v !== undefined && v !== '')
+      .map(([path, raw]) => {
+        const label = FIELD_LABEL[path] ?? path;
+        const value = formatFormValue(path, raw);
+        return `${label}: ${value}`;
+      });
+    if (lines.length === 0) return;
+    void sendMessage(lines.join('\n'));
   }
 
   const isTyping = state.status === 'sending';
@@ -344,6 +371,7 @@ function ChatRootInner() {
               isTyping={isTyping}
               onSelectCase={selectCase}
               onAnswerField={handleAnswerField}
+              onSubmitFormFields={handleSubmitFormFields}
               onOpenReview={() => dispatch({ type: 'OPEN_REVIEW' })}
               trailingSlot={
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -9,7 +9,7 @@ import type {
 } from './types';
 import { buildSummaryRows } from './summary-rows';
 
-const FIELD_LABEL: Record<string, string> = {
+export const FIELD_LABEL: Record<string, string> = {
   'application.sellerName': '매도인 이름',
   'application.sellerIdNumber': '매도인 주민번호',
   'application.sellerAddress': '매도인 주소',
@@ -73,10 +73,54 @@ const NUMBER_PATHS = new Set([
   'funding.mortgageLoan',
 ]);
 
+const BOOLEAN_PATHS = new Set([
+  'landUseSelf.hasExistingHouse',
+  'landUseTax.sellerIsMultiHouseOwner',
+  'landUseTax.buyerIsNoHouse',
+]);
+
+const CONSENT_PATHS = new Set([
+  'privacy.consent1',
+  'privacy.consent2',
+  'privacy.consent3',
+  'privacy.consent4',
+]);
+
+const ID_PATHS = new Set([
+  'application.sellerIdNumber',
+  'application.buyerIdNumber',
+  'proxy.principalIdNumber',
+  'proxy.agentIdNumber',
+]);
+
 function fieldType(path: string): FieldDescriptor['type'] {
+  if (ID_PATHS.has(path)) return 'id';
+  if (BOOLEAN_PATHS.has(path)) return 'boolean';
+  if (CONSENT_PATHS.has(path)) return 'consent';
   if (PHONE_PATHS.has(path)) return 'tel';
   if (NUMBER_PATHS.has(path)) return 'number';
   return 'text';
+}
+
+function fieldPlaceholder(path: string, type: FieldDescriptor['type']): string | undefined {
+  if (type === 'id') return '990101-1******';
+  if (type === 'tel') return '010-1234-5678';
+  if (path === 'application.landArea') return '예: 165';
+  if (
+    path === 'application.contractAmount' ||
+    path === 'funding.depositAmount' ||
+    path === 'funding.cashAmount' ||
+    path === 'funding.mortgageLoan'
+  )
+    return '예: 1500000000 또는 15억';
+  if (path.endsWith('Address')) return '예: 서울특별시 강남구 압구정동 123-45';
+  if (path.endsWith('Name')) return '예: 홍길동';
+  return undefined;
+}
+
+function fieldHelp(path: string, type: FieldDescriptor['type']): string | undefined {
+  if (type === 'id') return '뒷자리는 자동 마스킹됩니다';
+  return undefined;
 }
 
 function getNested(obj: unknown, path: string): unknown {
@@ -156,17 +200,21 @@ export function deriveSlots(
 
   // 2) form slot when 1~3 missing fields
   if (!ctx.isComplete && ctx.missingFields.length >= 1 && ctx.missingFields.length <= 3) {
-    const fields: FieldDescriptor[] = ctx.missingFields.map((p) => ({
-      path: p,
-      label: FIELD_LABEL[p] ?? p,
-      type: fieldType(p),
-      placeholder: '대화로 답변해주세요',
-      required: true,
-    }));
+    const fields: FieldDescriptor[] = ctx.missingFields.map((p) => {
+      const t = fieldType(p);
+      return {
+        path: p,
+        label: FIELD_LABEL[p] ?? p,
+        type: t,
+        placeholder: fieldPlaceholder(p, t),
+        help: fieldHelp(p, t),
+        required: true,
+      };
+    });
     slots.push({
       kind: 'form',
       title: '추가로 알려주실 정보',
-      submitLabel: '대화로 답변하기',
+      submitLabel: '이대로 보내기',
       fields,
     });
   }

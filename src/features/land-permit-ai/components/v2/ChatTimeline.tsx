@@ -23,6 +23,7 @@ interface ChatTimelineProps {
   isTyping?: boolean;
   onSelectCase?: (caseType: CaseType) => void;
   onAnswerField?: (path: string) => void;
+  onSubmitFormFields?: (values: Record<string, string>) => void;
   onOpenReview?: () => void;
   trailingSlot?: ReactNode;
 }
@@ -58,6 +59,7 @@ export function ChatTimeline({
   isTyping,
   onSelectCase,
   onAnswerField,
+  onSubmitFormFields,
   onOpenReview,
   trailingSlot,
 }: ChatTimelineProps) {
@@ -93,7 +95,12 @@ export function ChatTimeline({
             title={slot.title}
             fields={slot.fields}
             submitLabel={slot.submitLabel}
-            onAnswer={onAnswerField}
+            onSubmit={onSubmitFormFields}
+            onChatFallback={
+              onAnswerField
+                ? () => onAnswerField(slot.fields[0]?.path ?? '')
+                : undefined
+            }
           />
         );
       case 'summary':

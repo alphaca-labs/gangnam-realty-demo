@@ -19,7 +19,7 @@ export interface FieldDescriptor {
   hint?: string;
   help?: string;
   required?: boolean;
-  type?: 'text' | 'number' | 'tel';
+  type?: 'text' | 'number' | 'tel' | 'boolean' | 'consent' | 'id';
   value?: string;
 }
 
